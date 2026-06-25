@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
 import os
-
 import aws_cdk as cdk
 
-from qsr_voice_assistant_agentcore.qsr_voice_assistant_agentcore_stack import QsrVoiceAssistantAgentcoreStack
-
+from backend.cdk_pipeline.backend_pipeline import BackendPipelineStack
+from frontend.cdk_pipeline.frontend_pipeline import FrontendPipelineStack
 
 app = cdk.App()
-QsrVoiceAssistantAgentcoreStack(app, "QsrVoiceAssistantAgentcoreStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+env = cdk.Environment(
+    account=os.getenv('CDK_DEFAULT_ACCOUNT'),
+    region=os.getenv('CDK_DEFAULT_REGION')
+)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+# Backend Pipeline Stack
+backend_pipeline_stack = BackendPipelineStack(
+    app, "QSRVoiceAssistantBackendPipeline",
+    env=env
+)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+# Frontend Pipeline Stack
+frontend_pipeline_stack = FrontendPipelineStack(
+    app, "QSRVoiceAssistantFrontendPipeline",
+    env=env
+)
 
 app.synth()
