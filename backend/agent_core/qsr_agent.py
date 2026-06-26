@@ -11,6 +11,7 @@ import uvicorn
 import os
 import asyncio
 import uuid
+import traceback
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -449,7 +450,20 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # Run agent with authenticated input (including replayed first message)
             logger.info("🚀 Starting agent conversation loop")
-            await agent.run(inputs=[receive_with_replay], outputs=[websocket.send_json])
+            try:
+                await agent.run(inputs=[receive_with_replay], outputs=[websocket.send_json])
+            except ExceptionGroup as eg:
+                # Extract the inner exceptions from the ExceptionGroup
+                inner_errors = []
+                for exc in eg.exceptions:
+                    inner_errors.append(str(exc))
+                full_error = f"TaskGroup Error Details: {', '.join(inner_errors)}"
+                logger.error(f"❌ ExceptionGroup inside agent.run: {full_error}", exc_info=True)
+                await websocket.send_json({"type": "error", "message": full_error})
+                raise
+            except Exception as e:
+                logger.error(f"❌ Exception inside agent.run: {e}", exc_info=True)
+                raise
 
     except WebSocketDisconnect:
         logger.info("🔌 Client disconnected")

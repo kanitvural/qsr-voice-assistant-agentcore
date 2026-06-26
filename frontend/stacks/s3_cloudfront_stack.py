@@ -7,7 +7,8 @@ from aws_cdk import (
     aws_s3_deployment as s3deploy,
     RemovalPolicy,
     CfnOutput,
-    Duration
+    Duration,
+    Fn
 )
 from constructs import Construct
 
@@ -68,6 +69,28 @@ class S3CloudfrontStack(Stack):
                     ttl=Duration.minutes(30)
                 )
             ]
+        )
+
+        # ------------------------------------------------------------------
+        # Deploy App files and dynamic config.json
+        # ------------------------------------------------------------------
+        s3deploy.BucketDeployment(
+            self,
+            "DeployFrontendApp",
+            sources=[
+                s3deploy.Source.asset("frontend/qsr-app/out"),
+                s3deploy.Source.json_data("config.json", {
+                    "NEXT_PUBLIC_REGION": self.region,
+                    "NEXT_PUBLIC_USER_POOL_ID": Fn.import_value("QSR-UserPoolId"),
+                    "NEXT_PUBLIC_CLIENT_ID": Fn.import_value("QSR-UserPoolClientId"),
+                    "NEXT_PUBLIC_IDENTITY_POOL_ID": Fn.import_value("QSR-IdentityPoolId"),
+                    "NEXT_PUBLIC_WEBSOCKET_URL": Fn.import_value("QSRWebSocketEndpointUrl"),
+                    "NEXT_PUBLIC_RUNTIME_ARN": Fn.import_value("QSRAgentRuntimeArn"),
+                }),
+            ],
+            destination_bucket=site_bucket,
+            distribution=distribution,
+            distribution_paths=["/*"],
         )
 
         # ------------------------------------------------------------------

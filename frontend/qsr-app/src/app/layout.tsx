@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+import { Providers } from "@/components/Providers";
+import { ConfigProvider } from "@/components/ConfigProvider";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "AI QSR Voice Assistant",
@@ -13,7 +19,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${inter.className} bg-[#1a1a2e] text-white antialiased min-h-screen`}>
+        <ConfigProvider>
+          <Providers>
+            {children}
+          </Providers>
+        </ConfigProvider>
+      </body>
     </html>
   );
 }
