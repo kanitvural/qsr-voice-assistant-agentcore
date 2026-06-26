@@ -59,12 +59,14 @@ class FrontendPipelineStack(Stack):
                 "echo '📦 Installing Node.js and npm versions...' ",
                 "node -v",
                 "npm -v",
+                "echo '📦 Installing Python dependencies...' ",
+                "pip install boto3",
             ],
             commands=[
+                "echo '📦 Generating frontend environment configuration...'",
+                "python frontend/scripts/generate_frontend_env.py",
                 "echo '📦 Navigating to frontend project...'",
                 "cd frontend/qsr-app",
-                "echo '📦 Generating .env.local from CDK outputs...'",
-                "npm run prebuild",
                 "echo '📦 Installing frontend dependencies...'",
                 "npm ci",
                 "echo '🏗 Building Next.js project...'",
@@ -113,6 +115,10 @@ class FrontendPipelineStack(Stack):
                 ),
                 iam.PolicyStatement(
                     actions=["cloudfront:*"],
+                    resources=["*"],
+                ),
+                iam.PolicyStatement(
+                    actions=["cloudformation:ListExports"],
                     resources=["*"],
                 ),
             ],
