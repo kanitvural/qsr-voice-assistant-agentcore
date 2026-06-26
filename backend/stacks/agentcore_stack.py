@@ -48,7 +48,7 @@ class AgentCoreStack(Stack):
         agent_image = ecr_assets.DockerImageAsset(
             self, "QSRAgentImage",
             directory=os.path.join(os.path.dirname(__file__), '..', 'agent_core'),
-            platform=ecr_assets.Platform.LINUX_AMD64
+            platform=ecr_assets.Platform.LINUX_ARM64
         )
 
         # ------------------------------------------------------------------
@@ -56,7 +56,10 @@ class AgentCoreStack(Stack):
         # ------------------------------------------------------------------
         runtime_role = iam.Role(
             self, "QSRAgentRuntimeRole",
-            assumed_by=iam.ServicePrincipal("bedrock.amazonaws.com")
+            assumed_by=iam.CompositePrincipal(
+                iam.ServicePrincipal("bedrock.amazonaws.com"),
+                iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
+            )
         )
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonBedrockFullAccess"))
         runtime_role.add_to_policy(iam.PolicyStatement(
@@ -67,6 +70,9 @@ class AgentCoreStack(Stack):
             actions=["cognito-idp:DescribeUserPoolClient"],
             resources=[user_pool.user_pool_arn]
         ))
+        
+        # Grant full read access to ECR so Bedrock AgentCore can validate and pull the Docker image
+        runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ContainerRegistryReadOnly"))
 
         # ------------------------------------------------------------------
         # AgentCore: Runtime (L1 construct since we need protocolConfiguration="HTTP")

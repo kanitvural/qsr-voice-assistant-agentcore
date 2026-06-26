@@ -2,6 +2,7 @@ from aws_cdk import (
     Stack,
     aws_apigateway as apigateway,
     aws_logs as logs,
+    aws_iam as iam,
     RemovalPolicy,
     CfnOutput
 )
@@ -202,3 +203,23 @@ class ApiGatewayStack(Stack):
         CfnOutput(self, "ApiGatewayUrl", value=self.api.url, export_name="QSR-ApiGatewayUrl")
         CfnOutput(self, "ApiGatewayId", value=self.api.rest_api_id, export_name="QSR-ApiGatewayId")
         CfnOutput(self, "ApiGatewayArn", value=f"arn:aws:execute-api:{self.region}:{self.account}:{self.api.rest_api_id}/*", export_name="QSR-ApiGatewayArn")
+
+        # ==============================================================================
+        # API Gateway Account CloudWatch Role (AUTOMATIC LOGS)
+        # ==============================================================================
+        cw_logs_role = iam.Role(
+            self,
+            "ApiGatewayCWRole",
+            assumed_by=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+                )
+            ],
+        )
+
+        apigateway.CfnAccount(
+            self,
+            "ApiGatewayAccountConfig",
+            cloud_watch_role_arn=cw_logs_role.role_arn
+        )
