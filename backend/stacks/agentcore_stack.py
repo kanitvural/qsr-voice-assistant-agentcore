@@ -71,7 +71,8 @@ class AgentCoreStack(Stack):
             resources=[user_pool.user_pool_arn]
         ))
         
-        agent_image.repository.grant_pull(runtime_role)
+        # Grant full read access to ECR so Bedrock AgentCore can validate and pull the Docker image
+        runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ContainerRegistryReadOnly"))
 
         # ------------------------------------------------------------------
         # AgentCore: Runtime (L1 construct since we need protocolConfiguration="HTTP")
