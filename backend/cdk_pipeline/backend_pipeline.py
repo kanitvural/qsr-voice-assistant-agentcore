@@ -1,4 +1,4 @@
-from aws_cdk import Stack, pipelines as pipelines_
+from aws_cdk import Stack, aws_codebuild as codebuild, pipelines as pipelines_
 from constructs import Construct
 from .backend_stage import BackendPipelineStage
 
@@ -22,7 +22,7 @@ class BackendPipelineStack(Stack):
             connection_arn=connection_arn,
         )
 
-        synth_step = pipelines_.ShellStep(
+        synth_step = pipelines_.CodeBuildStep(
             "Synth",
             input=source,
             commands=[
@@ -30,6 +30,11 @@ class BackendPipelineStack(Stack):
                 "pip install -r requirements.txt",
                 "cdk synth --context @aws-cdk/core:bootstrapQualifier=backend",
             ],
+            build_environment=codebuild.BuildEnvironment(
+                build_image=codebuild.LinuxArmBuildImage.AMAZON_LINUX_2023_STANDARD_3_0,
+                compute_type=codebuild.ComputeType.SMALL,
+                privileged=True,
+            )
         )
 
         # Create the CodePipeline
@@ -38,6 +43,14 @@ class BackendPipelineStack(Stack):
             id="BackendPipeline",
             pipeline_name=pipeline_name,
             synth=synth_step,
+            asset_publishing_code_build_defaults=pipelines_.CodeBuildOptions(
+                build_environment=codebuild.BuildEnvironment(
+                    build_image=codebuild.LinuxArmBuildImage.AMAZON_LINUX_2023_STANDARD_3_0,
+                    compute_type=codebuild.ComputeType.SMALL,
+                    privileged=True,
+                )
+            ),
+            docker_enabled_for_synth=True,
         )
 
         backend_stage = BackendPipelineStage(
