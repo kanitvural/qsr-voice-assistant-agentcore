@@ -62,6 +62,7 @@ class AgentCoreStack(Stack):
             )
         )
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonBedrockFullAccess"))
+        runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchLogsFullAccess"))
         runtime_role.add_to_policy(iam.PolicyStatement(
             actions=["bedrock-agentcore:InvokeGateway"],
             resources=[gateway.gateway_arn]
@@ -95,7 +96,7 @@ class AgentCoreStack(Stack):
                 "LOG_LEVEL": "INFO",
                 "AGENTCORE_GATEWAY_URL": gateway.gateway_url,
                 "COMPANY_NAME": "Burger Palace",
-                "IMAGE_VERSION": "1.0",
+                "IMAGE_VERSION": "1.3",
                 "COGNITO_DOMAIN": cognito_domain_url,
                 "COGNITO_CLIENT_ID": app_client.user_pool_client_id,
                 "COGNITO_USER_POOL_ID": user_pool.user_pool_id
