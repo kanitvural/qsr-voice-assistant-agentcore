@@ -48,7 +48,7 @@ class AgentCoreStack(Stack):
         agent_image = ecr_assets.DockerImageAsset(
             self, "QSRAgentImage",
             directory=os.path.join(os.path.dirname(__file__), '..', 'agent_core'),
-            platform=ecr_assets.Platform.LINUX_AMD64
+            platform=ecr_assets.Platform.LINUX_ARM64
         )
 
         # ------------------------------------------------------------------
