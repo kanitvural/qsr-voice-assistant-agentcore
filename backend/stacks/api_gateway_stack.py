@@ -24,6 +24,7 @@ class ApiGatewayStack(Stack):
             self, "QSRApi",
             rest_api_name="QSR Ordering API",
             description="REST API for QSR ordering system with IAM authentication",
+            cloudwatch_role=True,
             deploy_options=apigateway.StageOptions(
                 stage_name="prod",
                 throttling_rate_limit=100,
