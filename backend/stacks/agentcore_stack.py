@@ -56,7 +56,10 @@ class AgentCoreStack(Stack):
         # ------------------------------------------------------------------
         runtime_role = iam.Role(
             self, "QSRAgentRuntimeRole",
-            assumed_by=iam.ServicePrincipal("bedrock.amazonaws.com")
+            assumed_by=iam.CompositePrincipal(
+                iam.ServicePrincipal("bedrock.amazonaws.com"),
+                iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
+            )
         )
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonBedrockFullAccess"))
         runtime_role.add_to_policy(iam.PolicyStatement(

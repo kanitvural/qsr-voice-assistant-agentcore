@@ -18,6 +18,7 @@ class LambdaStack(Stack):
         # 1. GetCustomerProfile
         self.get_customer_profile = _lambda.Function(
             self, "GetCustomerProfile",
+            function_name="QSR-GetCustomerProfile",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_customer_profile.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'get_customer_profile')),
@@ -33,6 +34,7 @@ class LambdaStack(Stack):
         # 2. GetPreviousOrders
         self.get_previous_orders = _lambda.Function(
             self, "GetPreviousOrders",
+            function_name="QSR-GetPreviousOrders",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_previous_orders.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'get_previous_orders')),
@@ -48,6 +50,7 @@ class LambdaStack(Stack):
         # 3. GetMenu
         self.get_menu = _lambda.Function(
             self, "GetMenu",
+            function_name="QSR-GetMenu",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_menu.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'get_menu')),
@@ -63,6 +66,7 @@ class LambdaStack(Stack):
         # 4. AddToCart
         self.add_to_cart = _lambda.Function(
             self, "AddToCart",
+            function_name="QSR-AddToCart",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="add_to_cart.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'add_to_cart')),
@@ -80,6 +84,7 @@ class LambdaStack(Stack):
         # 5. GetCart
         self.get_cart = _lambda.Function(
             self, "GetCart",
+            function_name="QSR-GetCart",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_cart.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'get_cart')),
@@ -95,6 +100,7 @@ class LambdaStack(Stack):
         # 6. UpdateCart
         self.update_cart = _lambda.Function(
             self, "UpdateCart",
+            function_name="QSR-UpdateCart",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="update_cart.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'update_cart')),
@@ -110,6 +116,7 @@ class LambdaStack(Stack):
         # 7. PlaceOrder
         self.place_order = _lambda.Function(
             self, "PlaceOrder",
+            function_name="QSR-PlaceOrder",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="place_order.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'place_order')),
@@ -129,6 +136,7 @@ class LambdaStack(Stack):
         # 8. GetNearestLocations
         self.get_nearest_locations = _lambda.Function(
             self, "GetNearestLocations",
+            function_name="QSR-GetNearestLocations",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_nearest_locations.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'get_nearest_locations')),
@@ -149,6 +157,7 @@ class LambdaStack(Stack):
         # 9. FindLocationAlongRoute
         self.find_location_along_route = _lambda.Function(
             self, "FindLocationAlongRoute",
+            function_name="QSR-FindLocationAlongRoute",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="find_location_along_route.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'find_location_along_route')),
@@ -169,6 +178,7 @@ class LambdaStack(Stack):
         # 10. GeocodeAddress
         self.geocode_address = _lambda.Function(
             self, "GeocodeAddress",
+            function_name="QSR-GeocodeAddress",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="geocode_address.handler",
             code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'geocode_address')),
