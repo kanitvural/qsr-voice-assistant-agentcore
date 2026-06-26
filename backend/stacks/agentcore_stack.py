@@ -70,6 +70,8 @@ class AgentCoreStack(Stack):
             actions=["cognito-idp:DescribeUserPoolClient"],
             resources=[user_pool.user_pool_arn]
         ))
+        
+        agent_image.repository.grant_pull(runtime_role)
 
         # ------------------------------------------------------------------
         # AgentCore: Runtime (L1 construct since we need protocolConfiguration="HTTP")

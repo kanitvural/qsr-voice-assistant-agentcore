@@ -31,7 +31,7 @@ The AI instantly uses its backend tools to look up the customer's order history,
 
 The entire architecture is built on a highly secure, real-time streaming pipeline:
 
-1. The user accesses the web application hosted on AWS from their browser or mobile device.
+1. The user accesses the web application hosted on **Amazon S3 & CloudFront** from their browser or mobile device.
 2. The user authenticates with **Amazon Cognito** using their username and password and receives JWT tokens (Access Token and ID Token).
 3. The frontend exchanges the ID Token with the Cognito Identity Pool for temporary AWS credentials (Access Key, Secret Key, Session Token).
 4. The frontend opens a **SigV4-signed WebSocket connection** to the **AgentCore Runtime** and sends the Access Token as the first message for identity verification.
