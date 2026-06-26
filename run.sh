@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Automatically fetch AWS account ID and region from AWS CLI config
+# Automatically fetch AWS account ID from AWS CLI config
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION=$(aws configure get region)
+REGION="us-east-1"
 
 check_env_param() {
   local env=$1
