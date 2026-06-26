@@ -133,8 +133,7 @@ def geocode_address(address):
     try:
         response = geo_client.search_text(
             QueryText=address,
-            MaxResults=1,
-            BiasPosition=[-98.5795, 39.8283] # US Center bias
+            MaxResults=1
         )
         items = response.get('ResultItems', [])
         if items and 'Position' in items[0]:
