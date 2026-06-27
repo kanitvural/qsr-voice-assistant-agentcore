@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, X } from "lucide-react";
 
 export default function ChatInterface() {
-  const { messages, isRecording, error, currentTool } = useChatStore();
+  const { messages, isRecording, isConnecting, error, currentTool } = useChatStore();
   const { startRecording, stopRecording, sendTextMessage } = useAgentCore();
   
   const [inputText, setInputText] = useState("");
@@ -18,7 +18,7 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages]);
 
   const handleSendText = () => {
@@ -109,6 +109,7 @@ export default function ChatInterface() {
             
             <VoiceButton
               isRecording={isRecording}
+              isConnecting={isConnecting}
               onClick={isRecording ? stopRecording : startRecording}
             />
           </div>

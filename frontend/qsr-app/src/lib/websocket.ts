@@ -173,7 +173,7 @@ export class WebSocketClient {
     };
 
     this.ws.send(JSON.stringify(message));
-    console.log('📤 Sent text:', text);
+    // console.log('📤 Sent text:', text);
   }
 
   sendAudio(audioBuffer: ArrayBuffer) {
