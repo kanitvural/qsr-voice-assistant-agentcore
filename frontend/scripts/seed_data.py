@@ -168,7 +168,9 @@ def generate_location_data(place, business_name):
     pos = place.get('Position', [0, 0])
     addr = place.get('Address', {})
     place_id = place.get('PlaceId', str(uuid.uuid4()))
-    title = place.get('Title', 'Unknown Location')
+    # Force the location name to be Burger Palace to match the AI's system prompt
+    original_title = place.get('Title', 'Location')
+    title = f"Burger Palace ({original_title})"
     
     # Extract address parts safely
     country = addr.get('Country', {}).get('Name') if isinstance(addr.get('Country'), dict) else addr.get('Country')

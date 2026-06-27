@@ -127,7 +127,13 @@ class CognitoStack(Stack):
                 user_srp=True
             ),
             generate_secret=False,
-            prevent_user_existence_errors=True
+            prevent_user_existence_errors=True,
+            read_attributes=cognito.ClientAttributes().with_standard_attributes(
+                email=True, fullname=True
+            ).with_custom_attributes("customerId"),
+            write_attributes=cognito.ClientAttributes().with_standard_attributes(
+                email=True, fullname=True
+            ).with_custom_attributes("customerId")
         )
 
         # Create Identity Pool
