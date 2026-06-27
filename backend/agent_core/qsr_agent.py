@@ -435,6 +435,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 async def logged_execute_tool(tool_name, tool_args):
                     logger.info(f"🔧 TOOL CALL: {tool_name}")
+                    
+                    # WORKAROUND: API Gateway expects query parameters to be strings
+                    # The LLM generates them as numbers, which fails validation
+                    if isinstance(tool_args, dict):
+                        string_params = [
+                            'latitude', 'longitude', 
+                            'startLatitude', 'startLongitude', 
+                            'endLatitude', 'endLongitude',
+                            'maxResults', 'maxDetourMinutes',
+                            'locationId', 'customerId', 'itemId'
+                        ]
+                        for param in string_params:
+                            if param in tool_args and isinstance(tool_args[param], (int, float)):
+                                tool_args[param] = str(tool_args[param])
+                                
                     logger.info(f"   Arguments: {tool_args}")
                     try:
                         result = await original_execute_tool(tool_name, tool_args)
