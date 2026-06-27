@@ -21,9 +21,18 @@ class FrontendPipelineStack(Stack):
             connection_arn=connection_arn,
         )
 
-        synth_step = pipelines_.ShellStep(
+        synth_step = pipelines_.CodeBuildStep(
             "Synth",
             input=source,
+            partial_build_spec=codebuild.BuildSpec.from_object({
+                "phases": {
+                    "install": {
+                        "runtime-versions": {
+                            "nodejs": "20"
+                        }
+                    }
+                }
+            }),
             commands=[
                 "echo '🔧 Installing Node.js 20 environment...'",
                 "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
