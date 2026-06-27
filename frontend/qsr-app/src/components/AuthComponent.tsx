@@ -13,7 +13,15 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { CognitoAuthService } from "../services/CognitoAuthService";
+import {
+  login,
+  signUp,
+  confirmSignUp,
+  forgotPassword,
+  confirmForgotPassword,
+  getAwsCredentials,
+  saveSession,
+} from "../lib/cognito";
 
 export default function AuthComponent({ onSignIn }: { onSignIn: () => void }) {
   const [mode, setMode] = useState<
@@ -113,48 +121,42 @@ export default function AuthComponent({ onSignIn }: { onSignIn: () => void }) {
 
     try {
       if (mode === "signin") {
-        await CognitoAuthService.login({
-          username: formData.email,
-          password: formData.password,
-        });
+        const session = await login(formData.email, formData.password);
+        const credentials = await getAwsCredentials(session.idToken);
+        saveSession(session, credentials);
 
         setSuccess("Successfully signed in!");
         setTimeout(() => onSignIn(), 1000);
       } else if (mode === "signup") {
         try {
-          await CognitoAuthService.signup({
-            username: formData.email,
-            password: formData.password,
-            email: formData.email,
-            firstName: capitalize(formData.firstName),
-            lastName: capitalize(formData.lastName),
-            gender: formData.gender,
-          });
+          await signUp(
+            formData.email,
+            formData.password,
+            capitalize(formData.firstName),
+            capitalize(formData.lastName)
+          );
           setSuccess("Account created! Please check your email for verification code.");
           setMode("verify");
         } catch (signupError: any) {
           setError(signupError.message || "Signup failed");
         }
       } else if (mode === "verify") {
-        await CognitoAuthService.confirmSignup({
-          username: formData.email,
-          code: formData.verificationCode,
-        });
+        await confirmSignUp(formData.email, formData.verificationCode);
         setSuccess("Email verified! You can now sign in.");
         setTimeout(() => {
           setMode("signin");
           setFormData({ ...formData, verificationCode: "" });
         }, 2000);
       } else if (mode === "forgot") {
-        await CognitoAuthService.forgotPassword(formData.email);
+        await forgotPassword(formData.email);
         setSuccess("Reset code sent to your email!");
         setMode("reset");
       } else if (mode === "reset") {
-        await CognitoAuthService.confirmForgotPassword({
-          username: formData.email,
-          code: formData.verificationCode,
-          newPassword: formData.password,
-        });
+        await confirmForgotPassword(
+          formData.email,
+          formData.verificationCode,
+          formData.password
+        );
         setSuccess("Password reset successful! You can now sign in.");
         setTimeout(() => {
           setMode("signin");

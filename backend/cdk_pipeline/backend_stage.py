@@ -14,15 +14,18 @@ class BackendPipelineStage(Stage):
 
         dynamodb_stack = DynamoDBStack(self, f"{project_name}-DynamoDBStack")
         location_stack = LocationStack(self, f"{project_name}-LocationStack")
-        cognito_stack = CognitoStack(self, f"{project_name}-CognitoStack", api_gateway_arn="*")
         
+        # LambdaStack must be created before CognitoStack because CognitoStack
+        # needs the post_confirmation Lambda function as a trigger.
         lambda_stack = LambdaStack(self, f"{project_name}-LambdaStack", dynamodb_stack, location_stack)
+
+        cognito_stack = CognitoStack(
+            self, f"{project_name}-CognitoStack",
+            api_gateway_arn="*",
+            post_confirmation_lambda=lambda_stack.post_confirmation
+        )
         
         api_gateway_stack = ApiGatewayStack(self, f"{project_name}-ApiGatewayStack", cognito_stack, lambda_stack)
-        
-        # We need to update CognitoStack with the actual API Gateway ARN to restrict permissions
-        # Unfortunately, CognitoStack is instantiated before ApiGatewayStack.
-        # But we passed "*" for now. We can update it if needed, or leave it as "*" for the prototype.
         
         agentcore_stack = AgentCoreStack(
             self, f"{project_name}-AgentCoreStack",
@@ -31,3 +34,4 @@ class BackendPipelineStage(Stage):
             app_client=cognito_stack.user_pool_client,
             cognito_domain_url="" # Not strictly needed
         )
+

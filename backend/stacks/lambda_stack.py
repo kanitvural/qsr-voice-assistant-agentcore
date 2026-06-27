@@ -184,6 +184,21 @@ class LambdaStack(Stack):
             resources=[location_stack.place_index.attr_index_arn]
         ))
 
+        # 11. PostConfirmation (Cognito Trigger — auto-assigns customerId)
+        self.post_confirmation = _lambda.Function(
+            self, "PostConfirmation",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="post_confirmation.handler",
+            code=_lambda.Code.from_asset(os.path.join(lambda_base_path, 'post_confirmation')),
+            timeout=Duration.seconds(10),
+            memory_size=128,
+            description="Cognito post-confirmation trigger: auto-assigns a unique customerId to new users."
+        )
+        self.post_confirmation.add_to_role_policy(iam.PolicyStatement(
+            actions=["cognito-idp:AdminUpdateUserAttributes"],
+            resources=[f"arn:aws:cognito-idp:{self.region}:{self.account}:userpool/*"]
+        ))
+
         # Stack Outputs
         CfnOutput(self, "GetCustomerProfileFunctionArn", value=self.get_customer_profile.function_arn, export_name="GetCustomerProfileFunctionArn")
         CfnOutput(self, "GetPreviousOrdersFunctionArn", value=self.get_previous_orders.function_arn, export_name="GetPreviousOrdersFunctionArn")
@@ -195,3 +210,5 @@ class LambdaStack(Stack):
         CfnOutput(self, "GetNearestLocationsFunctionArn", value=self.get_nearest_locations.function_arn, export_name="GetNearestLocationsFunctionArn")
         CfnOutput(self, "FindLocationAlongRouteFunctionArn", value=self.find_location_along_route.function_arn, export_name="FindLocationAlongRouteFunctionArn")
         CfnOutput(self, "GeocodeAddressFunctionArn", value=self.geocode_address.function_arn, export_name="GeocodeAddressFunctionArn")
+        CfnOutput(self, "PostConfirmationFunctionArn", value=self.post_confirmation.function_arn, export_name="PostConfirmationFunctionArn")
+

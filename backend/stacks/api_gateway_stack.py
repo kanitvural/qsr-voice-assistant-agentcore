@@ -188,12 +188,22 @@ class ApiGatewayStack(Stack):
         nearest = locations.add_resource('nearest')
         nearest.add_method('GET', integrations['nearest'], authorization_type=apigateway.AuthorizationType.IAM,
                            operation_name='GetNearestLocations', method_responses=responses,
-                           request_parameters={'method.request.querystring.latitude': True, 'method.request.querystring.longitude': True})
+                           request_parameters={
+                               'method.request.querystring.latitude': True, 
+                               'method.request.querystring.longitude': True,
+                               'method.request.querystring.maxResults': False
+                           })
 
         route = locations.add_resource('route')
         route.add_method('GET', integrations['route'], authorization_type=apigateway.AuthorizationType.IAM,
                          operation_name='FindLocationAlongRoute', method_responses=responses,
-                         request_parameters={'method.request.querystring.startLatitude': True, 'method.request.querystring.startLongitude': True, 'method.request.querystring.endLatitude': True, 'method.request.querystring.endLongitude': True})
+                         request_parameters={
+                             'method.request.querystring.startLatitude': True, 
+                             'method.request.querystring.startLongitude': True, 
+                             'method.request.querystring.endLatitude': True, 
+                             'method.request.querystring.endLongitude': True,
+                             'method.request.querystring.maxDetourMinutes': False
+                         })
 
         geocode = locations.add_resource('geocode')
         geocode.add_method('GET', integrations['geocode'], authorization_type=apigateway.AuthorizationType.IAM,

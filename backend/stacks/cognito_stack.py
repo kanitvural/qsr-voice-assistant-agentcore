@@ -1,6 +1,7 @@
 from aws_cdk import (
     Stack,
     aws_cognito as cognito,
+    aws_lambda as _lambda,
     aws_iam as iam,
     CfnParameter,
     Names,
@@ -10,7 +11,7 @@ from aws_cdk import (
 from constructs import Construct
 
 class CognitoStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, api_gateway_arn: str, **kwargs):
+    def __init__(self, scope: Construct, construct_id: str, api_gateway_arn: str, post_confirmation_lambda: _lambda.Function = None, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
         # Verification Email HTML Body Template
@@ -96,7 +97,7 @@ class CognitoStack(Stack):
                 fullname=cognito.StandardAttribute(required=True, mutable=True)
             ),
             custom_attributes={
-                "customerId": cognito.StringAttribute(mutable=False)
+                "customerId": cognito.StringAttribute(mutable=True)
             },
             password_policy=cognito.PasswordPolicy(
                 min_length=8,
@@ -106,8 +107,16 @@ class CognitoStack(Stack):
                 require_symbols=True
             ),
             account_recovery=cognito.AccountRecovery.EMAIL_ONLY,
-            removal_policy=RemovalPolicy.DESTROY
+            removal_policy=RemovalPolicy.DESTROY,
+            advanced_security_mode=cognito.AdvancedSecurityMode.ENFORCED
         )
+
+        # Post-Confirmation Lambda Trigger (auto-assigns customerId)
+        if post_confirmation_lambda:
+            self.user_pool.add_trigger(
+                cognito.UserPoolOperation.POST_CONFIRMATION,
+                post_confirmation_lambda
+            )
 
         # Create User Pool Client
         self.user_pool_client = self.user_pool.add_client(
