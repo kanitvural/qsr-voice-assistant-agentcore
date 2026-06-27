@@ -34,7 +34,7 @@ export function useAgentCore() {
         (error) => {
           console.warn('Geolocation permission denied or unavailable:', error.message);
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
       );
     }
   }, []);
@@ -133,7 +133,18 @@ export function useAgentCore() {
 
   const startRecording = useCallback(async () => {
     try {
-      if (!wsClientRef.current?.isConnected()) await initWebSocket();
+      if (!wsClientRef.current?.isConnected()) {
+        useChatStore.getState().setConnecting(true);
+        await initWebSocket();
+        
+        // Wait for the AI's initial greeting to be processed before showing the "Listening" green wave
+        setTimeout(() => {
+          useChatStore.getState().setConnecting(false);
+          setRecording(true);
+        }, 1500);
+      } else {
+        setRecording(true);
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
@@ -165,7 +176,7 @@ export function useAgentCore() {
 
       source.connect(processor);
       processor.connect(audioContext.destination);
-      setRecording(true);
+      // setRecording(true) is handled conditionally at the start of the function
     } catch (err) {
       setError("Failed to access microphone");
     }

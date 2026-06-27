@@ -22,6 +22,37 @@ from strands.tools import tool
 from mcp_proxy_for_aws.client import aws_iam_streamablehttp_client
 
 from jwt_auth import AuthInterceptor
+# Monkey patch awscrt's HTTP callbacks to prevent InvalidStateError spam.
+# When a connection is closed or task is cancelled, the underlying Future objects
+# are cancelled. But the awscrt C-extension thread might still be receiving data
+# and tries to call future.set_result() on a cancelled future, causing a loud exception.
+from awscrt.aio.http import AIOHttpClientStreamUnified
+
+_original_on_body = AIOHttpClientStreamUnified._on_body
+_original_on_response = AIOHttpClientStreamUnified._on_response
+_original_on_complete = AIOHttpClientStreamUnified._on_complete
+
+def _safe_on_body(self, chunk: bytes) -> None:
+    try:
+        _original_on_body(self, chunk)
+    except Exception:
+        pass
+
+def _safe_on_response(self, status_code: int, name_value_pairs: list) -> None:
+    try:
+        _original_on_response(self, status_code, name_value_pairs)
+    except Exception:
+        pass
+
+def _safe_on_complete(self, error_code: int) -> None:
+    try:
+        _original_on_complete(self, error_code)
+    except Exception:
+        pass
+
+AIOHttpClientStreamUnified._on_body = _safe_on_body
+AIOHttpClientStreamUnified._on_response = _safe_on_response
+AIOHttpClientStreamUnified._on_complete = _safe_on_complete
 
 # Suppress websockets deprecation warnings (library internal issue, not our code)
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="websockets")
@@ -483,19 +514,25 @@ async def websocket_endpoint(websocket: WebSocket):
                     first_message_replayed = True
                     return first_message
                 
+                from starlette.websockets import WebSocketDisconnect
                 # Receive message from auth_interceptor
-                message = await auth_interceptor.receive()
+                try:
+                    message = await auth_interceptor.receive()
+                except Exception:
+                    # Only call stop if it hasn't been called yet
+                    if not getattr(agent, "_is_stopping", False):
+                        agent._is_stopping = True
+                        logger.info("🔌 Client disconnected, stopping agent cleanly to prevent awscrt background errors")
+                        await agent.stop()
+                    
+                    # Hang forever instead of raising, to prevent TaskGroup from aggressively cancelling
+                    # agent.stop() running in another task, or to let run_outputs finish gracefully.
+                    import asyncio
+                    await asyncio.sleep(86400)
                 
                 if isinstance(message, dict):
                     msg_type = message.get("type", "unknown")
-                    if msg_type == "bidi_audio_input":
-                        # Only log every 10th audio packet to avoid spamming
-                        if not hasattr(receive_with_replay, "audio_count"):
-                            receive_with_replay.audio_count = 0
-                        receive_with_replay.audio_count += 1
-                        if receive_with_replay.audio_count % 10 == 0:
-                            logger.info(f"🎤 Received {receive_with_replay.audio_count} audio chunks from frontend")
-                    else:
+                    if msg_type != "bidi_audio_input":
                         logger.info(f"📥 Received from frontend: {msg_type}")
                         
                 # Check if it's a location response
@@ -518,12 +555,36 @@ async def websocket_endpoint(websocket: WebSocket):
                     logger.info(f"🔈 Sending audio to frontend (length: {len(audio_b64)})")
                 else:
                     logger.info(f"📤 Sending to frontend: {msg_type}")
-                await websocket.send_json(data)
+                try:
+                    await websocket.send_json(data)
+                except Exception as e:
+                    if not getattr(agent, "_is_stopping", False):
+                        agent._is_stopping = True
+                        logger.info(f"🔌 Client disconnected during send, stopping agent cleanly. (Error: {e})")
+                        await agent.stop()
+                    return
                 
             try:
                 await agent.run(inputs=[receive_with_replay], outputs=[debug_send_json])
             except BaseException as eg:
-                # Catch everything to see what is failing
+                import asyncio
+                from starlette.websockets import WebSocketDisconnect
+                
+                is_disconnect = "WebSocketDisconnect" in str(eg) or "WebSocketDisconnect" in repr(eg)
+                is_cancelled = isinstance(eg, asyncio.CancelledError)
+                
+                if is_disconnect or is_cancelled:
+                    logger.info(f"🔌 Connection ended (Cancelled: {is_cancelled}), stopping agent cleanly")
+                    if not getattr(agent, "_is_stopping", False):
+                        agent._is_stopping = True
+                        # Create background task for cleanup since current task might be cancelled
+                        asyncio.create_task(agent.stop())
+                    
+                    if is_disconnect:
+                        raise WebSocketDisconnect() from None
+                    else:
+                        raise
+                
                 import traceback
                 error_msg = f"TaskGroup Error Details: {str(eg)}\nTraceback: {traceback.format_exc()}"
                 logger.error(f"❌ Exception inside agent.run: {error_msg}")

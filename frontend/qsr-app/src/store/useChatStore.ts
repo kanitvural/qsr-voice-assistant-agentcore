@@ -11,6 +11,7 @@ export interface Message {
 interface ChatState {
   messages: Message[];
   isConnected: boolean;
+  isConnecting: boolean;
   isRecording: boolean;
   error: string | null;
   currentTool: string | null;
@@ -19,6 +20,7 @@ interface ChatState {
   addMessage: (role: "user" | "assistant", content: string, isAudio: boolean, isComplete?: boolean) => void;
   markLastAssistantMessageComplete: () => void;
   setConnected: (status: boolean) => void;
+  setConnecting: (status: boolean) => void;
   setRecording: (status: boolean) => void;
   setError: (error: string | null) => void;
   setCurrentTool: (tool: string | null) => void;
@@ -28,6 +30,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isConnected: false,
+  isConnecting: false,
   isRecording: false,
   error: null,
   currentTool: null,
@@ -68,6 +71,7 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
 
   setConnected: (status) => set({ isConnected: status }),
+  setConnecting: (status) => set({ isConnecting: status }),
   setRecording: (status) => set({ isRecording: status }),
   setError: (error) => set({ error }),
   setCurrentTool: (currentTool) => set({ currentTool }),

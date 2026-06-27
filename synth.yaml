@@ -1,0 +1,981 @@
+Resources:
+  FrontendPipelineArtifactsBucket83F807DD:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/ArtifactsBucket/Resource
+  FrontendPipelineArtifactsBucketPolicy35376F44:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: FrontendPipelineArtifactsBucket83F807DD
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+            Effect: Deny
+            Principal:
+              AWS: "*"
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+          - Action:
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":iam::"
+                    - Ref: AWS::AccountId
+                    - :role/cdk-frontend-deploy-role-
+                    - Ref: AWS::AccountId
+                    - "-"
+                    - Ref: AWS::Region
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/ArtifactsBucket/Policy/Resource
+  FrontendPipelineRole09488FB4:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Role/Resource
+  FrontendPipelineRoleDefaultPolicy71F9BD71:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRole3F3E264F
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":iam::"
+                    - Ref: AWS::AccountId
+                    - :role/cdk-frontend-deploy-role-
+                    - Ref: AWS::AccountId
+                    - "-"
+                    - Ref: AWS::Region
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineRoleDefaultPolicy71F9BD71
+      Roles:
+        - Ref: FrontendPipelineRole09488FB4
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Role/DefaultPolicy/Resource
+  FrontendPipeline2D714552:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location:
+          Ref: FrontendPipelineArtifactsBucket83F807DD
+        Type: S3
+      Name: qsr-voice-assistant-frontend-pipeline-757884822287
+      PipelineType: V2
+      RestartExecutionOnUpdate: true
+      RoleArn:
+        Fn::GetAtt:
+          - FrontendPipelineRole09488FB4
+          - Arn
+      Stages:
+        - Actions:
+            - ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: "1"
+              Configuration:
+                ConnectionArn: arn:aws:codeconnections:eu-central-1:757884822287:connection/6ac6d892-fc1e-4108-9396-3d6ed79b000d
+                FullRepositoryId: kanitvural/qsr-voice-assistant-agentcore
+                BranchName: frontend
+              Name: kanitvural_qsr-voice-assistant-agentcore
+              OutputArtifacts:
+                - Name: kanitvural_qsr_voice_assistant_agentcore_Source
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRole3F3E264F
+                  - Arn
+              RunOrder: 1
+          Name: Source
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineBuildSynthCdkBuildProject23E1AF95
+                EnvironmentVariables: '[{"name":"_PROJECT_CONFIG_HASH","type":"PLAINTEXT","value":"52a5c89596c5ef39f23d8526d6a537174518eb834788442b8921c3ed2b4df333"}]'
+              InputArtifacts:
+                - Name: kanitvural_qsr_voice_assistant_agentcore_Source
+              Name: Synth
+              OutputArtifacts:
+                - Name: Synth_Output
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+          Name: Build
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineUpdatePipelineSelfMutationB4CED08D
+                EnvironmentVariables: '[{"name":"_PROJECT_CONFIG_HASH","type":"PLAINTEXT","value":"a1e1303b540311b2d58c3150e27ae2dfe9a0b87b5b5ca6263e7ebec501cebabe"}]'
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: SelfMutate
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+          Name: UpdatePipeline
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineAssetsFileAsset1E8AF5287
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: QSRVoiceAssistantFrontendPipeline_FrontendPipbd9653123AutoDeleteObjectsCustomResourceProvider_Code
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineAssetsFileAsset2097A3A9B
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: DeployFrontendApp_AwsCliLayer_Code
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineAssetsFileAsset3A85249CD
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: Custom_CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C_Code
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineAssetsFileAsset47E5C7B16
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: DeployFrontendApp_Asset1
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName:
+                  Ref: FrontendPipelineAssetsFileAsset5E8BD3264
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: DeployFrontendApp_Asset2
+              RoleArn:
+                Fn::GetAtt:
+                  - FrontendPipelineCodeBuildActionRole05744541
+                  - Arn
+              RunOrder: 1
+          Name: Assets
+        - Actions:
+            - ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: FrontendPipelineStage-qsr-voice-assistant-S3CloudfrontStack
+                Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                RoleArn:
+                  Fn::Join:
+                    - ""
+                    - - "arn:"
+                      - Ref: AWS::Partition
+                      - ":iam::"
+                      - Ref: AWS::AccountId
+                      - :role/cdk-frontend-cfn-exec-role-
+                      - Ref: AWS::AccountId
+                      - "-"
+                      - Ref: AWS::Region
+                ActionMode: CHANGE_SET_REPLACE
+                ChangeSetName: PipelineChange
+                TemplatePath: Synth_Output::assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.template.json
+              InputArtifacts:
+                - Name: Synth_Output
+              Name: Prepare
+              RoleArn:
+                Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":iam::"
+                    - Ref: AWS::AccountId
+                    - :role/cdk-frontend-deploy-role-
+                    - Ref: AWS::AccountId
+                    - "-"
+                    - Ref: AWS::Region
+              RunOrder: 1
+            - ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: FrontendPipelineStage-qsr-voice-assistant-S3CloudfrontStack
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName: PipelineChange
+              Name: Deploy
+              RoleArn:
+                Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":iam::"
+                    - Ref: AWS::AccountId
+                    - :role/cdk-frontend-deploy-role-
+                    - Ref: AWS::AccountId
+                    - "-"
+                    - Ref: AWS::Region
+              RunOrder: 2
+          Name: FrontendPipelineStage
+    DependsOn:
+      - FrontendPipelineRoleDefaultPolicy71F9BD71
+      - FrontendPipelineRole09488FB4
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Resource
+  FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRole3F3E264F:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - FrontendPipelineRole09488FB4
+                  - Arn
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Source/kanitvural_qsr-voice-assistant-agentcore/CodePipelineActionRole/Resource
+  FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRoleDefaultPolicyB4767E98:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: codestar-connections:UseConnection
+            Effect: Allow
+            Resource: arn:aws:codeconnections:eu-central-1:757884822287:connection/6ac6d892-fc1e-4108-9396-3d6ed79b000d
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+          - Action:
+              - s3:PutObjectAcl
+              - s3:PutObjectVersionAcl
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - Fn::GetAtt:
+                      - FrontendPipelineArtifactsBucket83F807DD
+                      - Arn
+                  - /*
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRoleDefaultPolicyB4767E98
+      Roles:
+        - Ref: FrontendPipelineSourcekanitvuralqsrvoiceassistantagentcoreCodePipelineActionRole3F3E264F
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Source/kanitvural_qsr-voice-assistant-agentcore/CodePipelineActionRole/DefaultPolicy/Resource
+  FrontendPipelineBuildSynthCdkBuildProjectRole2E642110:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Build/Synth/CdkBuildProject/Role/Resource
+  FrontendPipelineBuildSynthCdkBuildProjectRoleDefaultPolicy49A0D2A4:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - Fn::Join:
+                  - ""
+                  - - arn:aws:logs:us-east-1:757884822287:log-group:/aws/codebuild/
+                    - Ref: FrontendPipelineBuildSynthCdkBuildProject23E1AF95
+                    - :*
+              - Fn::Join:
+                  - ""
+                  - - arn:aws:logs:us-east-1:757884822287:log-group:/aws/codebuild/
+                    - Ref: FrontendPipelineBuildSynthCdkBuildProject23E1AF95
+          - Action:
+              - codebuild:BatchPutCodeCoverages
+              - codebuild:BatchPutTestCases
+              - codebuild:CreateReport
+              - codebuild:CreateReportGroup
+              - codebuild:UpdateReport
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - arn:aws:codebuild:us-east-1:757884822287:report-group/
+                  - Ref: FrontendPipelineBuildSynthCdkBuildProject23E1AF95
+                  - -*
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineBuildSynthCdkBuildProjectRoleDefaultPolicy49A0D2A4
+      Roles:
+        - Ref: FrontendPipelineBuildSynthCdkBuildProjectRole2E642110
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Build/Synth/CdkBuildProject/Role/DefaultPolicy/Resource
+  FrontendPipelineBuildSynthCdkBuildProject23E1AF95:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Build/Synth
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineBuildSynthCdkBuildProjectRole2E642110
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "build": {
+                "commands": [
+                  "echo '🔧 Installing Node.js 20 environment...'",
+                  "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
+                  "apt-get install -y nodejs",
+                  "node -v",
+                  "echo '📦 Installing Node.js dependencies...'",
+                  "cd frontend/qsr-app && npm ci && npm run build && cd ../..",
+                  "echo '📦 Synthesizing CDK...'",
+                  "npm install -g aws-cdk",
+                  "pip install -r requirements.txt",
+                  "cdk synth --context @aws-cdk/core:bootstrapQualifier=frontend"
+                ]
+              }
+            },
+            "artifacts": {
+              "base-directory": "cdk.out",
+              "files": "**/*"
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Pipeline/Build/Synth/CdkBuildProject/Resource
+  FrontendPipelineCodeBuildActionRole05744541:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - FrontendPipelineRole09488FB4
+                  - Arn
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/CodeBuildActionRole/Resource
+  FrontendPipelineCodeBuildActionRoleDefaultPolicyB33E3FD0:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineAssetsFileAsset1E8AF5287
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineAssetsFileAsset2097A3A9B
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineAssetsFileAsset3A85249CD
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineAssetsFileAsset47E5C7B16
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineAssetsFileAsset5E8BD3264
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineBuildSynthCdkBuildProject23E1AF95
+                  - Arn
+              - Fn::GetAtt:
+                  - FrontendPipelineUpdatePipelineSelfMutationB4CED08D
+                  - Arn
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineCodeBuildActionRoleDefaultPolicyB33E3FD0
+      Roles:
+        - Ref: FrontendPipelineCodeBuildActionRole05744541
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/CodeBuildActionRole/DefaultPolicy/Resource
+  FrontendPipelineUpdatePipelineSelfMutationRoleE8242EF9:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/UpdatePipeline/SelfMutation/Role/Resource
+  FrontendPipelineUpdatePipelineSelfMutationRoleDefaultPolicy0A06777D:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - Fn::Join:
+                  - ""
+                  - - arn:aws:logs:us-east-1:757884822287:log-group:/aws/codebuild/
+                    - Ref: FrontendPipelineUpdatePipelineSelfMutationB4CED08D
+                    - :*
+              - Fn::Join:
+                  - ""
+                  - - arn:aws:logs:us-east-1:757884822287:log-group:/aws/codebuild/
+                    - Ref: FrontendPipelineUpdatePipelineSelfMutationB4CED08D
+          - Action:
+              - codebuild:BatchPutCodeCoverages
+              - codebuild:BatchPutTestCases
+              - codebuild:CreateReport
+              - codebuild:CreateReportGroup
+              - codebuild:UpdateReport
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - arn:aws:codebuild:us-east-1:757884822287:report-group/
+                  - Ref: FrontendPipelineUpdatePipelineSelfMutationB4CED08D
+                  - -*
+          - Action: sts:AssumeRole
+            Condition:
+              ForAnyValue:StringEquals:
+                iam:ResourceTag/aws-cdk:bootstrap-role:
+                  - image-publishing
+                  - file-publishing
+                  - deploy
+            Effect: Allow
+            Resource: arn:*:iam::757884822287:role/*
+          - Action:
+              - cloudformation:DescribeStacks
+              - s3:ListBucket
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineUpdatePipelineSelfMutationRoleDefaultPolicy0A06777D
+      Roles:
+        - Ref: FrontendPipelineUpdatePipelineSelfMutationRoleE8242EF9
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/UpdatePipeline/SelfMutation/Role/DefaultPolicy/Resource
+  FrontendPipelineUpdatePipelineSelfMutationB4CED08D:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/UpdatePipeline/SelfMutate
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      Name: qsr-voice-assistant-frontend-pipeline-757884822287-selfupdate
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineUpdatePipelineSelfMutationRoleE8242EF9
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g aws-cdk@2"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk -a . deploy QSRVoiceAssistantFrontendPipeline --require-approval=never --verbose"
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/UpdatePipeline/SelfMutation/Resource
+  FrontendPipelineAssetsFileRoleAF324382:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileRole/Resource
+  FrontendPipelineAssetsFileRoleDefaultPolicyD15F75E6:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: arn:aws:logs:us-east-1:757884822287:log-group:/aws/codebuild/*
+          - Action:
+              - codebuild:BatchPutCodeCoverages
+              - codebuild:BatchPutTestCases
+              - codebuild:CreateReport
+              - codebuild:CreateReportGroup
+              - codebuild:UpdateReport
+            Effect: Allow
+            Resource: arn:aws:codebuild:us-east-1:757884822287:report-group/*
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+            Effect: Allow
+            Resource: "*"
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-frontend-file-publishing-role-${AWS::AccountId}-${AWS::Region}
+          - Action:
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - FrontendPipelineArtifactsBucket83F807DD
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - FrontendPipelineArtifactsBucket83F807DD
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+      PolicyName: FrontendPipelineAssetsFileRoleDefaultPolicyD15F75E6
+      Roles:
+        - Ref: FrontendPipelineAssetsFileRoleAF324382
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileRole/DefaultPolicy/Resource
+  FrontendPipelineAssetsFileAsset1E8AF5287:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Assets/QSRVoiceAssistantFrontendPipeline_FrontendPipbd9653123AutoDeleteObjectsCustomResourceProvider_Code
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineAssetsFileRoleAF324382
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g cdk-assets@latest"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk-assets --path \"assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.assets.json\" --verbose publish \"faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6:current_account-current_region-83dc1a62\""
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileAsset1/Resource
+  FrontendPipelineAssetsFileAsset2097A3A9B:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Assets/DeployFrontendApp_AwsCliLayer_Code
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineAssetsFileRoleAF324382
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g cdk-assets@latest"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk-assets --path \"assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.assets.json\" --verbose publish \"a72522445441e9b66c2f16956c54d4786af8c61c156b80c48a6e7c32fcc49023:current_account-current_region-f6a4094f\""
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileAsset2/Resource
+  FrontendPipelineAssetsFileAsset3A85249CD:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Assets/Custom_CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C_Code
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineAssetsFileRoleAF324382
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g cdk-assets@latest"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk-assets --path \"assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.assets.json\" --verbose publish \"97e9ebf0b174a5c8f7faa505739022b7f509edddffcab9211dcd08b759944c4f:current_account-current_region-1830fd5c\""
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileAsset3/Resource
+  FrontendPipelineAssetsFileAsset47E5C7B16:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Assets/DeployFrontendApp_Asset1
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineAssetsFileRoleAF324382
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g cdk-assets@latest"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk-assets --path \"assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.assets.json\" --verbose publish \"0edde53e0a8f26fdb33507b5fed99cf3a33946cb59938180d42dd1bb1202f5cc:current_account-current_region-948a072b\""
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileAsset4/Resource
+  FrontendPipelineAssetsFileAsset5E8BD3264:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: NO_CACHE
+      Description: Pipeline step QSRVoiceAssistantFrontendPipeline/Pipeline/Assets/DeployFrontendApp_Asset2
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole:
+        Fn::GetAtt:
+          - FrontendPipelineAssetsFileRoleAF324382
+          - Arn
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "commands": [
+                  "npm install -g cdk-assets@latest"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "cdk-assets --path \"assembly-QSRVoiceAssistantFrontendPipeline-FrontendPipelineStage/QSRVoiceAssistantFrontendPipelineFrontendPipelineStageqsrvoiceassistantS3CloudfrontStackE03ABA35.assets.json\" --verbose publish \"88d67f25eebf335a4e8e2e156df5efbff850ee04e5d143df252abb18c62d8506:current_account-current_region-1697bb0e\""
+                ]
+              }
+            }
+          }
+        Type: CODEPIPELINE
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/FrontendPipeline/Assets/FileAsset5/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/+1YXW/aMBT9LfVjZbIOpD3wRlk3TaxdFFhfEKoc50JdHDuynXWRlf8+OU4CW7VpK+lAFClRwj3X9+McOyTuB/13F8HFGXnUPZqse5zFgZ0aQtc4YxlwJkAHY5lAWP/C5FHfWSoTaPDANtjcosZ4Q1JAQ3SOcGuaFZkz3fYRRlRJrUeUylyYCRQaDZeEa6iBCFZMiggyzigxTIrLnK7B6DqgglzDeOM4zbNMKlNVvfHRhihz9R1o7iJ8EV+zhBhAQ6NywEhJ3tQHgsQcJlBE0lTZajtRhi0JNT55bcx1y0QkOXyQakTdmKaDEltEkmRqyArQcG6RdnctG+XiIBwWeLwUTR8l1oPA+i7nFsXVzZZ+IKgqMtfkBIonNjREk+vp3fXoZvTx6n0FLaWiMJ1+briOuaTrMI85oyNKQW80SuU3wkPJGXWBFRjCBPLV+Xqwv3iXtri6jY2bx0vMSBpYp8vcIqJ1nkJyWaChRZligrKM8HrONRJXPm6AV9EH9rNjw5encybDJkhT8dzWZBtD6P0n4dhsMXSO/gL8c9wTuo0+W1A3eqWIMKMWfqLBv5WyF8F/mpV4Rz4OscGtjup1dyCqdVrGKdiegx3/OnoxtFPqXkCHLonYUbrONeku4OHOr0Mt+5T6v6auXu3dKsf1m79b/M2qm8lf/wJ+Y64+gQykINyn41baozfvia7XlfYIBXz1tXdh9psr9Y6E2yiLc8aTzS5ZqOQDUDO3/gn7zMNn8aHKEkegZa4oVE/KHc9FicPC3EvxZhC8HQT9swfNWE/lwrAUgshffwAyLaXoORQAAA==
+    Metadata:
+      aws:cdk:path: QSRVoiceAssistantFrontendPipeline/CDKMetadata/Default
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/frontend/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+

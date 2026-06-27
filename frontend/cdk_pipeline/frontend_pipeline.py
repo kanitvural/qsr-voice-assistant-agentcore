@@ -21,10 +21,23 @@ class FrontendPipelineStack(Stack):
             connection_arn=connection_arn,
         )
 
-        synth_step = pipelines_.ShellStep(
+        synth_step = pipelines_.CodeBuildStep(
             "Synth",
             input=source,
+            partial_build_spec=codebuild.BuildSpec.from_object({
+                "phases": {
+                    "install": {
+                        "runtime-versions": {
+                            "nodejs": "20"
+                        }
+                    }
+                }
+            }),
             commands=[
+                "echo '🔧 Installing Node.js 20 environment...'",
+                "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
+                "apt-get install -y nodejs",
+                "node -v",
                 "echo '📦 Installing Node.js dependencies...'",
                 "cd frontend/qsr-app && npm ci && npm run build && cd ../..",
                 "echo '📦 Synthesizing CDK...'",
@@ -40,6 +53,11 @@ class FrontendPipelineStack(Stack):
             id="FrontendPipeline",
             pipeline_name=pipeline_name,
             synth=synth_step,
+            code_build_defaults=pipelines_.CodeBuildOptions(
+                build_environment=codebuild.BuildEnvironment(
+                    build_image=codebuild.LinuxBuildImage.STANDARD_7_0
+                )
+            )
         )
 
         frontend_stage = FrontendPipelineStage(
