@@ -129,10 +129,10 @@ class CognitoStack(Stack):
             generate_secret=False,
             prevent_user_existence_errors=True,
             read_attributes=cognito.ClientAttributes().with_standard_attributes(
-                email=True, fullname=True
+                email=True, fullname=True, given_name=True, family_name=True
             ).with_custom_attributes("customerId"),
             write_attributes=cognito.ClientAttributes().with_standard_attributes(
-                email=True, fullname=True
+                email=True, fullname=True, given_name=True, family_name=True
             ).with_custom_attributes("customerId")
         )
 
