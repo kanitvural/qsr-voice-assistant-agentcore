@@ -121,7 +121,7 @@ def handle_location_response(request_id: str, location_data: dict):
 # Define location tool at module level using @tool decorator
 # This tool accesses the current websocket via the global current_websocket variable
 @tool
-async def get_customer_location() -> dict:
+async def get_customer_location(dummy: str = "") -> dict:
     """
     Get the customer's current geolocation (latitude and longitude) from their device.
     
@@ -456,19 +456,26 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Extract the inner exceptions from the ExceptionGroup
                 inner_errors = []
                 for exc in eg.exceptions:
-                    inner_errors.append(str(exc))
+                    inner_errors.append(repr(exc))
                 full_error = f"TaskGroup Error Details: {', '.join(inner_errors)}"
                 logger.error(f"❌ ExceptionGroup inside agent.run: {full_error}", exc_info=True)
                 await websocket.send_json({"type": "error", "message": full_error})
-                raise
             except Exception as e:
-                logger.error(f"❌ Exception inside agent.run: {e}", exc_info=True)
-                raise
+                logger.error(f"❌ Exception inside agent.run: {repr(e)}", exc_info=True)
+                await websocket.send_json({"type": "error", "message": repr(e)})
 
     except WebSocketDisconnect:
         logger.info("🔌 Client disconnected")
+    except ExceptionGroup as eg:
+        logger.error(f"❌ Outer ExceptionGroup: {eg}", exc_info=True)
+        inner_errors = [repr(exc) for exc in eg.exceptions]
+        full_error = f"Outer TaskGroup Error Details: {', '.join(inner_errors)}"
+        try:
+            await websocket.send_json({"type": "error", "message": full_error})
+        except Exception:
+            pass
     except Exception as e:
-        logger.error(f"❌ Error: {e}", exc_info=True)
+        logger.error(f"❌ Error: {repr(e)}", exc_info=True)
         try:
             await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:
