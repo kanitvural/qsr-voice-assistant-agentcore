@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { WebSocketClient } from "@/lib/websocket";
 import { getStoredSession } from "@/lib/cognito";
 import { useChatStore } from "@/store/useChatStore";
@@ -20,6 +20,25 @@ export function useAgentCore() {
   const playbackContextRef = useRef<AudioContext | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
 
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Geolocation permission denied or unavailable:', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, []);
+
   const initWebSocket = useCallback(async () => {
     if (wsClientRef.current?.isConnected()) return;
 
@@ -40,6 +59,7 @@ export function useAgentCore() {
         credentials,
         region,
         accessToken: session.accessToken,
+        userLocation: userLocation || undefined,
       });
 
       client.onConnected(() => {

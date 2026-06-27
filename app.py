@@ -12,16 +12,20 @@ env = cdk.Environment(
     region="us-east-1"
 )
 
-# Backend Pipeline Stack
-backend_pipeline_stack = BackendPipelineStack(
-    app, "QSRVoiceAssistantBackendPipeline",
-    env=env
-)
+qualifier = app.node.try_get_context("@aws-cdk/core:bootstrapQualifier")
 
-# Frontend Pipeline Stack
-frontend_pipeline_stack = FrontendPipelineStack(
-    app, "QSRVoiceAssistantFrontendPipeline",
-    env=env
-)
+if qualifier == "backend" or not qualifier:
+    # Backend Pipeline Stack
+    backend_pipeline_stack = BackendPipelineStack(
+        app, "QSRVoiceAssistantBackendPipeline",
+        env=env
+    )
+
+if qualifier == "frontend" or not qualifier:
+    # Frontend Pipeline Stack
+    frontend_pipeline_stack = FrontendPipelineStack(
+        app, "QSRVoiceAssistantFrontendPipeline",
+        env=env
+    )
 
 app.synth()

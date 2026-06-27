@@ -56,10 +56,7 @@ class AgentCoreStack(Stack):
         # ------------------------------------------------------------------
         runtime_role = iam.Role(
             self, "QSRAgentRuntimeRole",
-            assumed_by=iam.CompositePrincipal(
-                iam.ServicePrincipal("bedrock.amazonaws.com"),
-                iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
-            )
+            assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
         )
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonBedrockFullAccess"))
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchLogsFullAccess"))
@@ -74,6 +71,23 @@ class AgentCoreStack(Stack):
         
         # Grant full read access to ECR so Bedrock AgentCore can validate and pull the Docker image
         runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ContainerRegistryReadOnly"))
+        runtime_role.add_to_policy(iam.PolicyStatement(
+            actions=["ecr:GetAuthorizationToken"],
+            resources=["*"]
+        ))
+
+        # Explicit Bedrock Model Invocations (Crucial for Nova Sonic & Bidirectional Streams)
+        runtime_role.add_to_policy(iam.PolicyStatement(
+            actions=[
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream",
+                "bedrock:InvokeModelWithBidirectionalStream"
+            ],
+            resources=["*"]
+        ))
+
+        # X-Ray Tracing (Since OpenTelemetry is instrumented)
+        runtime_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess"))
 
         # ------------------------------------------------------------------
         # AgentCore: Runtime (L1 construct since we need protocolConfiguration="HTTP")
