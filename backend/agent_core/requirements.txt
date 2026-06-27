@@ -16,4 +16,3 @@ boto3>=1.35.0
 mcp>=1.0.0
 # Install mcp-proxy-for-aws from GitHub to get latest version with client module
 git+https://github.com/aws/mcp-proxy-for-aws.git@v1.1.5
-

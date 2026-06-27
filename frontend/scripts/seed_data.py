@@ -4,6 +4,7 @@ import json
 import random
 import time
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 try:
     import boto3
@@ -131,7 +132,7 @@ def get_customer_info(exports):
 
 def geocode_address(address):
     try:
-        response = geo_client.search_text(
+        response = geo_client.geocode(
             QueryText=address,
             MaxResults=1
         )
@@ -214,17 +215,24 @@ def generate_menu_items(location_id):
     items = []
     for category, cat_items in MENU_CATEGORIES.items():
         for item in cat_items:
+            # Convert float prices in customizations to Decimal for DynamoDB compatibility
+            customizations = []
+            for cust in item.get('customizations', []):
+                cust_copy = dict(cust)
+                cust_copy['price'] = Decimal(str(cust['price']))
+                customizations.append(cust_copy)
+                
             items.append({
                 'PK': f"LOCATION#{location_id}#ITEM#{item['itemId']}",
                 'locationId': location_id,
                 'itemId': item['itemId'],
                 'name': item['name'],
                 'description': item['description'],
-                'price': str(item['price']),
+                'price': Decimal(str(item['price'])),
                 'category': [category, 'All Items'],
                 'isAvailable': True,
                 'isCombo': category == 'combos',
-                'availableCustomizations': item['customizations'],
+                'availableCustomizations': customizations,
                 'createdAt': datetime.utcnow().isoformat() + "Z"
             })
     return items
@@ -253,12 +261,18 @@ def generate_orders(customer_id, locations, num_orders=5):
             selected_custom = random.sample(item['customizations'], num_custom)
             
             item_price = item['price'] + sum(c['price'] for c in selected_custom)
+            order_customizations = []
+            for cust in selected_custom:
+                cust_copy = dict(cust)
+                cust_copy['price'] = Decimal(str(cust['price']))
+                order_customizations.append(cust_copy)
+                
             order_items.append({
                 'itemId': item['itemId'],
                 'name': item['name'],
-                'price': str(item['price']),
+                'price': Decimal(str(item['price'])),
                 'quantity': 1,
-                'customizations': selected_custom
+                'customizations': order_customizations
             })
             subtotal += item_price
             
@@ -276,9 +290,9 @@ def generate_orders(customer_id, locations, num_orders=5):
             'locationId': loc['locationId'],
             'locationName': loc['name'],
             'items': order_items,
-            'subtotal': str(round(subtotal, 2)),
-            'tax': str(tax),
-            'total': str(total),
+            'subtotal': Decimal(str(round(subtotal, 2))),
+            'tax': Decimal(str(tax)),
+            'total': Decimal(str(total)),
             'status': 'completed',
             'createdAt': order_time.isoformat() + "Z",
             'completedAt': (order_time + timedelta(minutes=20)).isoformat() + "Z"
@@ -303,12 +317,15 @@ def main():
     
     header("Step 2: Location Input")
     while True:
-        address = input("\033[36mWhat city/address are you looking for? (e.g. Dallas, TX or 123 Main St): \033[0m").strip()
-        if not address:
-            warn("Address cannot be empty.")
+        country = input("\033[36mEnter country (e.g. Turkey, US, UK): \033[0m").strip()
+        city = input("\033[36mEnter city (e.g. Ordu, Dallas): \033[0m").strip()
+        
+        if not country or not city:
+            warn("Country and city cannot be empty.")
             continue
             
-        info("Geocoding address...")
+        address = f"{city}, {country}"
+        info(f"Geocoding address: {address}...")
         coords = geocode_address(address)
         if coords:
             ok(f"Address found! Coordinates: {coords[0]}, {coords[1]}")

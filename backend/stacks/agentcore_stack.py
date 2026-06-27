@@ -38,7 +38,10 @@ class AgentCoreStack(Stack):
                         ]
                     )
                 ]
-            )
+            ),
+            credential_provider_configurations=[
+                agentcore.GatewayCredentialProvider.from_iam_role()
+            ]
         )
 
         # ------------------------------------------------------------------
@@ -74,6 +77,12 @@ class AgentCoreStack(Stack):
         runtime_role.add_to_policy(iam.PolicyStatement(
             actions=["ecr:GetAuthorizationToken"],
             resources=["*"]
+        ))
+
+        # Explicit API Gateway Invocation
+        runtime_role.add_to_policy(iam.PolicyStatement(
+            actions=["execute-api:Invoke"],
+            resources=[f"arn:aws:execute-api:{self.region}:{self.account}:{api_gateway.rest_api_id}/*/*/*"]
         ))
 
         # Explicit Bedrock Model Invocations (Crucial for Nova Sonic & Bidirectional Streams)
