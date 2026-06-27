@@ -10,6 +10,7 @@ export class WebSocketClient {
   private region: string;
   private accessToken: string;
   private userLocation?: { latitude: number; longitude: number };
+  private isFullyConnected: boolean = false;
   
   // Callbacks
   private onConnectedCb?: () => void;
@@ -55,47 +56,58 @@ export class WebSocketClient {
       const configStore = useConfigStore.getState().config;
       if (!configStore) throw new Error("Config not loaded");
 
-      // Construct the strict Bedrock AgentCore WebSocket URL
-      // It completely ignores the runtime specific hostname and uses the bedrock-agentcore regional endpoint
-      const baseUrl = `wss://bedrock-agentcore.${configStore.region}.amazonaws.com/runtimes/${this.runtimeArn}/ws?qualifier=DEFAULT&voice_id=tiffany`;
-      const httpsUrl = baseUrl.replace('wss://', 'https://');
-      const urlObject = new URL(httpsUrl);
-      
-      const sigV4 = new SignatureV4({
-        credentials: {
-          accessKeyId: this.credentials.accessKeyId,
-          secretAccessKey: this.credentials.secretAccessKey,
-          sessionToken: this.credentials.sessionToken,
-        },
-        region: configStore.region,
-        service: "bedrock-agentcore", // It MUST be bedrock-agentcore, not bedrock
-        sha256: Sha256,
-      });
+      // If local testing, bypass AWS SigV4 signing
+      let finalUrl = configStore.websocketUrl;
+      if (finalUrl.includes('localhost') || finalUrl.includes('127.0.0.1')) {
+        finalUrl = `${finalUrl}?qualifier=DEFAULT&voice_id=tiffany`;
+      } else {
+        // Construct the strict Bedrock AgentCore WebSocket URL
+        // It completely ignores the runtime specific hostname and uses the bedrock-agentcore regional endpoint
+        const baseUrl = `wss://bedrock-agentcore.${configStore.region}.amazonaws.com/runtimes/${this.runtimeArn}/ws?qualifier=DEFAULT&voice_id=tiffany`;
+        const httpsUrl = baseUrl.replace('wss://', 'https://');
+        const urlObject = new URL(httpsUrl);
+        
+        const sigV4 = new SignatureV4({
+          credentials: {
+            accessKeyId: this.credentials.accessKeyId,
+            secretAccessKey: this.credentials.secretAccessKey,
+            sessionToken: this.credentials.sessionToken,
+          },
+          region: configStore.region,
+          service: "bedrock-agentcore", // It MUST be bedrock-agentcore, not bedrock
+          sha256: Sha256,
+        });
 
-      const signedRequest = await sigV4.presign({
-        method: "GET",
-        protocol: "https:",
-        hostname: urlObject.hostname,
-        path: urlObject.pathname,
-        headers: {
-          host: urlObject.hostname,
-        },
-        query: Object.fromEntries(urlObject.searchParams.entries()),
-      }, { expiresIn: 300 });
+        const signedRequest = await sigV4.presign({
+          method: "GET",
+          protocol: "https:",
+          hostname: urlObject.hostname,
+          path: urlObject.pathname,
+          headers: {
+            host: urlObject.hostname,
+          },
+          query: Object.fromEntries(urlObject.searchParams.entries()),
+        }, { expiresIn: 300 });
 
-      let finalUrl = `https://${signedRequest.hostname}${signedRequest.path}`;
-      if (signedRequest.query) {
-        const queryParams = new URLSearchParams(signedRequest.query as Record<string, string>);
-        finalUrl += `?${queryParams.toString()}`;
+        finalUrl = `https://${signedRequest.hostname}${signedRequest.path}`;
+        if (signedRequest.query) {
+          const queryParams = new URLSearchParams(signedRequest.query as Record<string, string>);
+          finalUrl += `?${queryParams.toString()}`;
+        }
+        finalUrl = finalUrl.replace('https://', 'wss://');
       }
-      finalUrl = finalUrl.replace('https://', 'wss://');
 
       this.ws = new WebSocket(finalUrl);
       // NOTE: We don't use binaryType = "arraybuffer" anymore because AgentCore protocol sends everything as JSON strings with base64 audio
 
       this.ws.onopen = () => {
         this.sendIdentity();
-        this.onConnectedCb?.();
+        // Delay onConnectedCb to prevent audio from racing ahead of "Hi"
+        // This is critical because Nova Sonic hangs if audio arrives before the initial text prompt!
+        setTimeout(() => {
+          this.isFullyConnected = true;
+          this.onConnectedCb?.();
+        }, 500);
       };
 
       this.ws.onclose = (event) => {
@@ -126,7 +138,7 @@ export class WebSocketClient {
   }
 
   isConnected(): boolean {
-    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN && this.isFullyConnected;
   }
 
   // --- Outgoing Messages ---
@@ -146,13 +158,22 @@ export class WebSocketClient {
     }, 100); // Small delay to ensure auth is processed first
   }
 
-  sendText(text: string) {
-    if (!this.isConnected()) return;
-    const msg = {
-      type: "bidi_text_input", // Bedrock AgentCore strict type
-      text: text,
+  /**
+   * Send text message to AgentCore
+   */
+  sendText(text: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('Cannot send text: WebSocket not connected');
+      return;
+    }
+
+    const message = {
+      type: 'bidi_text_input',
+      text
     };
-    this.ws?.send(JSON.stringify(msg));
+
+    this.ws.send(JSON.stringify(message));
+    console.log('📤 Sent text:', text);
   }
 
   sendAudio(audioBuffer: ArrayBuffer) {

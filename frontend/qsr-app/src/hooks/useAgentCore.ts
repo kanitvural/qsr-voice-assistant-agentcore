@@ -94,7 +94,7 @@ export function useAgentCore() {
     } catch (err: any) {
       setError(err.message || "Failed to connect to AgentCore");
     }
-  }, [addMessage, markLastAssistantMessageComplete, setConnected, setError, setCurrentTool]);
+  }, [addMessage, markLastAssistantMessageComplete, setConnected, setError, setCurrentTool, userLocation]);
 
   const playAudio = async (audioData: ArrayBuffer) => {
     try {
@@ -148,14 +148,17 @@ export function useAgentCore() {
       processor.onaudioprocess = (e) => {
         if (wsClientRef.current?.isConnected()) {
           const inputData = e.inputBuffer.getChannelData(0);
+          
+          // Downsample to 16kHz
           const downsampleRatio = audioContext.sampleRate / 16000;
           const outputLength = Math.floor(inputData.length / downsampleRatio);
           const int16Data = new Int16Array(outputLength);
-
+          
           for (let i = 0; i < outputLength; i++) {
             const sourceIndex = Math.floor(i * downsampleRatio);
             int16Data[i] = Math.max(-32768, Math.min(32767, inputData[sourceIndex] * 32768));
           }
+          
           wsClientRef.current.sendAudio(int16Data.buffer);
         }
       };
@@ -169,12 +172,29 @@ export function useAgentCore() {
   }, [initWebSocket, setError, setRecording]);
 
   const stopRecording = useCallback(() => {
+    // Stop audio recording
     if (recordingContextRef.current && isRecording) {
       recordingContextRef.current.close();
       recordingContextRef.current = null;
       setRecording(false);
     }
-  }, [isRecording, setRecording]);
+
+    // Stop audio playback
+    if (playbackContextRef.current) {
+      playbackContextRef.current.close();
+      playbackContextRef.current = null;
+    }
+
+    // Disconnect WebSocket gracefully
+    if (wsClientRef.current) {
+      wsClientRef.current.disconnect();
+      wsClientRef.current = null;
+      setConnected(false);
+    }
+
+    // Reset audio playback state
+    nextPlayTimeRef.current = 0;
+  }, [isRecording, setRecording, setConnected]);
 
   const sendTextMessage = useCallback((text: string) => {
     if (!text.trim()) return;

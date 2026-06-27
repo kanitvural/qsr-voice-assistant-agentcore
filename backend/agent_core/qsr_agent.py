@@ -11,7 +11,6 @@ import uvicorn
 import os
 import asyncio
 import uuid
-import traceback
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,7 +27,13 @@ from jwt_auth import AuthInterceptor
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="websockets")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="uvicorn")
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -121,7 +126,7 @@ def handle_location_response(request_id: str, location_data: dict):
 # Define location tool at module level using @tool decorator
 # This tool accesses the current websocket via the global current_websocket variable
 @tool
-async def get_customer_location(dummy: str = "") -> dict:
+async def get_customer_location() -> dict:
     """
     Get the customer's current geolocation (latitude and longitude) from their device.
     
@@ -293,6 +298,9 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("⏳ Waiting for authentication...")
         first_message = await auth_interceptor.receive()
         
+        msg_type = first_message.get("type", "unknown") if isinstance(first_message, dict) else type(first_message)
+        logger.info(f"🟢 FIRST MESSAGE RECEIVED AFTER AUTH: {msg_type}")
+        
         # Verify we have user info
         if not auth_interceptor.user_info:
             raise ValueError("Authentication failed: No user information received")
@@ -309,7 +317,9 @@ async def websocket_endpoint(websocket: WebSocket):
         
         # Configure Nova Sonic 2 model for voice interaction
         model = BidiNovaSonicModel(
-            region="us-east-1",
+            client_config={
+                "region": os.environ.get("AWS_REGION", "us-east-1")
+            },
             model_id="amazon.nova-2-sonic-v1:0",
             provider_config={
                 "audio": {
@@ -323,10 +333,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # Connect to AgentCore Gateway as MCP client to discover tools
         gateway_url = os.environ.get("AGENTCORE_GATEWAY_URL")
-        if not gateway_url:
-            logger.error("❌ AGENTCORE_GATEWAY_URL environment variable not set")
-            raise ValueError("AGENTCORE_GATEWAY_URL must be set")
-        
+        if not gateway_url or gateway_url.strip() == "":
+            gateway_url = "https://qsr-ordering-gateway-kisrnzxdi6.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
+            
         logger.info(f"🔗 Connecting to AgentCore Gateway: {gateway_url}")
 
         # Create MCP client factory for AWS IAM authentication
@@ -381,6 +390,31 @@ async def websocket_endpoint(websocket: WebSocket):
                                 schema['required'].remove('basePath')
             
             logger.info(f"✅ Modified {tools_modified} tools to remove basePath parameter")
+
+            # WORKAROUND: Shorten tool names to avoid Bedrock's 64-character limit
+            # Fix tool names for Nova (no hyphens) and 64-character limits
+            for t in mcp_tools:
+                if not hasattr(t, '_agent_tool_name'):
+                    continue
+                
+                raw_name = t._agent_tool_name.replace("___", "_").replace("-", "_")
+                
+                # The Gateway prepends a long CDK prefix like: 
+                # 'BackendPipelineStageqsrvoiceassistantAgentCoreStackQSRGatewayQSRApiGatewayTargetAB2D2CB7_AddToCart'
+                if "_" in raw_name:
+                    parts = raw_name.split("_", 1)
+                    # If the first part is a long AWS generated ID, drop it
+                    if len(parts[0]) > 25 and parts[0].isalnum():
+                        raw_name = parts[1]
+                
+                # Bedrock limit is 64 characters
+                if len(raw_name) > 64:
+                    raw_name = raw_name[-64:]
+                    
+                # Strip leading/trailing underscores if any
+                short_name = raw_name.strip("_")
+                logger.info(f"🔄 Renaming tool {t._agent_tool_name[:20]}... to {short_name}")
+                t._agent_tool_name = short_name
 
             # Combine MCP tools with module-level location tool
             all_tools = mcp_tools + [get_customer_location]
@@ -437,6 +471,18 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Receive message from auth_interceptor
                 message = await auth_interceptor.receive()
                 
+                if isinstance(message, dict):
+                    msg_type = message.get("type", "unknown")
+                    if msg_type == "bidi_audio_input":
+                        # Only log every 10th audio packet to avoid spamming
+                        if not hasattr(receive_with_replay, "audio_count"):
+                            receive_with_replay.audio_count = 0
+                        receive_with_replay.audio_count += 1
+                        if receive_with_replay.audio_count % 10 == 0:
+                            logger.info(f"🎤 Received {receive_with_replay.audio_count} audio chunks from frontend")
+                    else:
+                        logger.info(f"📥 Received from frontend: {msg_type}")
+                        
                 # Check if it's a location response
                 if isinstance(message, dict) and message.get('type') == 'location_response':
                     request_id = message.get('request_id')
@@ -444,38 +490,38 @@ async def websocket_endpoint(websocket: WebSocket):
                     if request_id:
                         handle_location_response(request_id, location_data)
                     # Don't return this message to the agent, get the next one
-                    return await auth_interceptor.receive()
+                    return await receive_with_replay()
                 
                 return message
 
             # Run agent with authenticated input (including replayed first message)
             logger.info("🚀 Starting agent conversation loop")
+            async def debug_send_json(data):
+                msg_type = data.get('type') if isinstance(data, dict) else type(data)
+                if msg_type == 'bidi_audio_stream':
+                    audio_b64 = data.get('audio', '')
+                    logger.info(f"🔈 Sending audio to frontend (length: {len(audio_b64)})")
+                else:
+                    logger.info(f"📤 Sending to frontend: {msg_type}")
+                await websocket.send_json(data)
+                
             try:
-                await agent.run(inputs=[receive_with_replay], outputs=[websocket.send_json])
-            except ExceptionGroup as eg:
-                # Extract the inner exceptions from the ExceptionGroup
-                inner_errors = []
-                for exc in eg.exceptions:
-                    inner_errors.append(repr(exc))
-                full_error = f"TaskGroup Error Details: {', '.join(inner_errors)}"
-                logger.error(f"❌ ExceptionGroup inside agent.run: {full_error}", exc_info=True)
-                await websocket.send_json({"type": "error", "message": full_error})
-            except Exception as e:
-                logger.error(f"❌ Exception inside agent.run: {repr(e)}", exc_info=True)
-                await websocket.send_json({"type": "error", "message": repr(e)})
+                await agent.run(inputs=[receive_with_replay], outputs=[debug_send_json])
+            except BaseException as eg:
+                # Catch everything to see what is failing
+                import traceback
+                error_msg = f"TaskGroup Error Details: {str(eg)}\nTraceback: {traceback.format_exc()}"
+                logger.error(f"❌ Exception inside agent.run: {error_msg}")
+                try:
+                    await websocket.send_json({"type": "error", "message": str(eg)})
+                except:
+                    pass
+                raise
 
     except WebSocketDisconnect:
         logger.info("🔌 Client disconnected")
-    except ExceptionGroup as eg:
-        logger.error(f"❌ Outer ExceptionGroup: {eg}", exc_info=True)
-        inner_errors = [repr(exc) for exc in eg.exceptions]
-        full_error = f"Outer TaskGroup Error Details: {', '.join(inner_errors)}"
-        try:
-            await websocket.send_json({"type": "error", "message": full_error})
-        except Exception:
-            pass
     except Exception as e:
-        logger.error(f"❌ Error: {repr(e)}", exc_info=True)
+        logger.error(f"❌ Error: {e}", exc_info=True)
         try:
             await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:

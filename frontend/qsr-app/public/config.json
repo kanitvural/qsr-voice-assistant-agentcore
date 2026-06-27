@@ -3,6 +3,6 @@
   "NEXT_PUBLIC_CLIENT_ID": "6nnpbmlh26ibhvt0dpheosb0vd",
   "NEXT_PUBLIC_IDENTITY_POOL_ID": "us-east-1:15474fa4-2b4d-43f5-a27f-8436345961bb",
   "NEXT_PUBLIC_REGION": "us-east-1",
-  "NEXT_PUBLIC_WEBSOCKET_URL": "wss://qsr_ordering_agent_runtime.agentcore.bedrock.us-east-1.amazonaws.com",
+  "NEXT_PUBLIC_WEBSOCKET_URL": "ws://localhost:8080/ws",
   "NEXT_PUBLIC_RUNTIME_ARN": "arn:aws:bedrock-agentcore:us-east-1:757884822287:runtime/qsr_ordering_agent_runtime-EK274WFeQ9"
 }
