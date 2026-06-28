@@ -22,7 +22,7 @@ This project demonstrates a fully functional, highly conversational **Omnichanne
 
 Want to see the entire platform in action? Watch the quick demo:
 
-[![Ultimate AWS Platform Demo](https://img.youtube.com/vi/-8tu2imrqno/maxresdefault.jpg)](https://youtu.be/-8tu2imrqno)
+[![Ultimate AWS Platform Demo](https://img.youtube.com/vi/SagiW7cQ8xA/maxresdefault.jpg)](https://youtu.be/SagiW7cQ8xA)
 
 **Click to watch:** Real-time data flow, ML predictions, web dashboard & AI chatbot in 2 minutes
 
@@ -76,13 +76,13 @@ This project implements a fully managed, scalable, and secure architecture utili
 ## 🏗️ Deep Dive: Technical Enterprise Features
 
 * **Customer Authentication (Amazon Cognito)**: The system utilizes an Amazon Cognito User Pool to securely manage customer profiles and authentication. Users can sign up, log in, and manage their credentials securely. The web application retrieves JWT tokens from Cognito, which are then used to authenticate backend API calls and secure the WebSocket connection. The `AuthInterceptor` natively intercepts the first JSON payload (`type: auth`) over the WebSocket connection to verify the customer's identity before audio streams are permitted.
-  <br>![Cognito User Pool](_images/cognito_users.png)
+  <br>![Cognito Auth](_images/auth.png)
+  <br>![Verification Email](_images/verification_email.png)
 * **MCP (Model Context Protocol) Gateway**: Instead of hardcoding tools into the frontend or the model, all tools are exposed via the AgentCore Gateway as MCP endpoints. The AI dynamically discovers available tools (Lambda functions) and requests executions seamlessly.
 * **Infinite Scalability (Serverless)**: Thanks to AgentCore, API Gateway, and AWS Lambda, the entire compute layer is 100% serverless. 
 * **Serverless & Secure Frontend**: The Voice Assistant UI is built in Next.js and exported as a static site hosted on Amazon S3 and distributed globally via Amazon CloudFront. Origin Access Control (OAC) ensures the S3 bucket is completely blocked from the public internet.
 * **Full Observability & Auditability**: Enterprise systems require strict auditing. AgentCore is fully integrated with AWS CloudWatch (accessible via GenAI Observability > Bedrock AgentCore). Every tool the AI calls, every database response it reads, and its internal "Chain of Thought" reasoning are logged. If the AI makes a decision, administrators can trace exactly *why* and *how* it reached that conclusion.
-  <br>![CloudWatch Dashboard](_images/cloudwatch_dashboard.png)
-  <br>![Agent Trace Observability](_images/observability.png)
+  <br>![Monitoring & Observability](_images/monitoring.png)
 
 ---
 
@@ -90,7 +90,9 @@ This project implements a fully managed, scalable, and secure architecture utili
 
 The project consists of multiple CDK stacks deployed via AWS CodePipeline:
 
-![CodePipeline Stacks](_images/pipeline_stacks.png)
+![CodePipeline Stacks](_images/pipelines.png)
+<br>![Backend Pipeline](_images/backend-pipeline.png)
+<br>![Frontend Pipeline](_images/frontend-pipeline.png)
 
 1. **AgentCoreStack**: Hosts the AgentCore Gateway, the Bidi Agent Runtime, and orchestrates the WebSocket layer.
 2. **ApiGatewayStack**: Exposes REST APIs for all backend business logic.
@@ -163,7 +165,7 @@ In our previous architecture, the AgentCore Gateway communicated directly with L
 
 Instead of writing manual tool wrappers, the AgentCore Gateway automatically ingests the OpenAPI schemas directly from the API Gateway. The AI Agent seamlessly discovers these REST APIs and uses the entire serverless backend infrastructure as its toolset. When the AI needs real-world data, it triggers a specific AWS Lambda function via API Gateway to query or mutate state in DynamoDB:
 
-![Lambda Functions](_images/lambda_functions.png)
+![Lambda Functions](_images/lambdas.png)
 
 * **GetMenu Tool** ➡️ Queries `QSR-Menu` for current items and prices.
 * **Location Tools** ➡️ `GeocodeAddress`, `GetNearestLocations`, `FindLocationAlongRoute` ➡️ Uses AWS Location Service and queries `QSR-Locations`.
@@ -177,7 +179,9 @@ Instead of writing manual tool wrappers, the AgentCore Gateway automatically ing
 
 The project deploys 5 DynamoDB tables that act as the single source of truth for the QSR chain:
 
-![DynamoDB Tables](_images/dynamodb_tables.png)
+![Customers Table](_images/customers_table.png)
+![Locations Table](_images/locations_table.png)
+![Orders Table](_images/orders_table.png)
 
 1. **`QSR-Locations`**: Stores the GPS coordinates, addresses, and IDs of the restaurant branches.
 2. **`QSR-Menu`**: Stores available items, prices, and allowed customizations (e.g., "No Onions", "Extra Cheese").
@@ -265,7 +269,11 @@ The pipeline pulls the source code directly from GitHub. You must configure an A
 ### 3. Deploy the Infrastructure (Zero-Touch Deployment)
 The system uses AWS CDK self-mutating pipelines. Deploy the backend and frontend stacks:
 ```bash
+
+make bootstrap env=backend
 make deploy env=backend
+
+make bootstrap env=frontend
 make deploy env=frontend
 ```
 
@@ -274,16 +282,17 @@ Once the frontend pipeline finishes, you can easily fetch the live application U
 ```bash
 python frontend/scripts/get_cloudfront_url.py
 ```
+### 5. Create a User Account
+Before logging into the frontend, you must register a new user in the Amazon Cognito User Pool. You can do this by navigating to the live application URL (CloudFront) and clicking on the **Sign Up** button, or by creating a user directly via the AWS Cognito Console. Ensure you use the same email address that you provided during the `seed_data.py` step to link your synthetic order history to your profile.
 
-### 5. Generate Synthetic Data
+### 6. Generate Synthetic Data
 Once the deployment finishes, populate your DynamoDB tables with real-world locations near you:
 ```bash
 python frontend/scripts/seed_data.py
 ```
 *(The script will ask for your email to tie the test data to your Cognito account, and will use AWS Geo Places to find real locations near your address).*
 
-### 6. Create a User Account
-Before logging into the frontend, you must register a new user in the Amazon Cognito User Pool. You can do this by navigating to the live application URL (CloudFront) and clicking on the **Sign Up** button, or by creating a user directly via the AWS Cognito Console. Ensure you use the same email address that you provided during the `seed_data.py` step to link your synthetic order history to your profile.
+
 
 ---
 
@@ -291,7 +300,7 @@ Before logging into the frontend, you must register a new user in the Amazon Cog
 
 Once the data is seeded, open the frontend web application (CloudFront URL), log in, click the Microphone button, and try speaking these scenarios to test the various backend tools and DynamoDB tables:
 
-![App Dashboard](_images/app_dashboard.png)
+![App Dashboard](_images/screenshot.png)
 
 **🧑‍💻 1. Customer Profile (`QSR-Customers`) & Past Orders (`QSR-Orders`)**
 > *"How many orders have I placed so far? By the way, do I have any loyalty points and loyalty tier?"*
