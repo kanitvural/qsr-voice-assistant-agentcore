@@ -1,4 +1,4 @@
-# QSR Voice Assistant powered by Amazon Bedrock AgentCore
+# QSR Omnichannel Voice Assistant powered by Amazon Bedrock AgentCore
 
 <!-- Core Framework & Language -->
 [![AWS CDK](https://img.shields.io/badge/AWS%20CDK-2.1127.0-orange.svg)](https://aws.amazon.com/cdk/)
@@ -12,7 +12,7 @@
 [![API Gateway](https://img.shields.io/badge/Amazon%20API%20Gateway-REST-FF4F8B.svg)](https://aws.amazon.com/api-gateway/)
 [![Cognito](https://img.shields.io/badge/Amazon%20Cognito-Auth-DD344C.svg)](https://aws.amazon.com/cognito/)
 
-![Architecture Diagram](_images/architecture_diagram.drawio.svg)
+![Architecture Diagram](_images/architecture_diagram.svg)
 
 This project demonstrates a fully functional, highly conversational **Omnichannel Voice Ordering Assistant** for a Quick Service Restaurant (QSR) chain. Powered by **Amazon Nova Sonic v2**, **Amazon Bedrock AgentCore**, and the **MCP Protocol**, the assistant engages customers in natural, real-time voice conversations to take orders, upsell items, and locate the nearest branches using AWS Location Services.
 
