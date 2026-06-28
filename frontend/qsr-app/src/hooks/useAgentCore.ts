@@ -34,7 +34,7 @@ export function useAgentCore() {
         (error) => {
           console.warn('Geolocation permission denied or unavailable:', error.message);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 } // true for higher accuracy for finding location, false for faster response
       );
     }
   }, []);

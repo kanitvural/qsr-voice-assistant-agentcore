@@ -18,6 +18,16 @@ This project demonstrates a fully functional, highly conversational **Omnichanne
 
 ---
 
+## 🎥 Watch It In Action
+
+Want to see the entire platform in action? Watch the quick demo:
+
+[![Ultimate AWS Platform Demo](https://img.youtube.com/vi/-8tu2imrqno/maxresdefault.jpg)](https://youtu.be/-8tu2imrqno)
+
+**Click to watch:** Real-time data flow, ML predictions, web dashboard & AI chatbot in 2 minutes
+
+---
+
 ## 📦 What Business Problem Does This Solve?
 
 Traditional QSR ordering experiences (Drive-Thru speakers, mobile apps, and in-store kiosks) are often frictionless but highly impersonal. They lack the ability to intelligently upsell, remember past customer preferences, or dynamically adjust to the customer's real-time physical context.
