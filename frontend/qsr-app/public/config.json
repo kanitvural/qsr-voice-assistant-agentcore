@@ -1,8 +1,8 @@
 {
-  "NEXT_PUBLIC_USER_POOL_ID": "us-east-1_LsgaKOQCo",
-  "NEXT_PUBLIC_CLIENT_ID": "6nnpbmlh26ibhvt0dpheosb0vd",
-  "NEXT_PUBLIC_IDENTITY_POOL_ID": "us-east-1:15474fa4-2b4d-43f5-a27f-8436345961bb",
+  "NEXT_PUBLIC_USER_POOL_ID": "us-east-1_xxxxxxxxx",
+  "NEXT_PUBLIC_CLIENT_ID": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "NEXT_PUBLIC_IDENTITY_POOL_ID": "us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "NEXT_PUBLIC_REGION": "us-east-1",
   "NEXT_PUBLIC_WEBSOCKET_URL": "ws://localhost:8080/ws",
-  "NEXT_PUBLIC_RUNTIME_ARN": "arn:aws:bedrock-agentcore:us-east-1:757884822287:runtime/qsr_ordering_agent_runtime-EK274WFeQ9"
+  "NEXT_PUBLIC_RUNTIME_ARN": "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/qsr_ordering_agent_runtime-xxxxxxxxxx"
 }

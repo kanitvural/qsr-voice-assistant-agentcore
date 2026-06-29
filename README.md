@@ -1,4 +1,4 @@
-# QSR Voice Assistant powered by Amazon Bedrock AgentCore
+# QSR Omnichannel Voice Assistant powered by Amazon Bedrock AgentCore
 
 <!-- Core Framework & Language -->
 [![AWS CDK](https://img.shields.io/badge/AWS%20CDK-2.1127.0-orange.svg)](https://aws.amazon.com/cdk/)
@@ -12,7 +12,7 @@
 [![API Gateway](https://img.shields.io/badge/Amazon%20API%20Gateway-REST-FF4F8B.svg)](https://aws.amazon.com/api-gateway/)
 [![Cognito](https://img.shields.io/badge/Amazon%20Cognito-Auth-DD344C.svg)](https://aws.amazon.com/cognito/)
 
-![Architecture Diagram](_images/architecture_diagram.drawio.svg)
+![Architecture Diagram](_images/architecture_diagram.svg)
 
 This project demonstrates a fully functional, highly conversational **Omnichannel Voice Ordering Assistant** for a Quick Service Restaurant (QSR) chain. Powered by **Amazon Nova Sonic v2**, **Amazon Bedrock AgentCore**, and the **MCP Protocol**, the assistant engages customers in natural, real-time voice conversations to take orders, upsell items, and locate the nearest branches using AWS Location Services.
 
@@ -22,7 +22,7 @@ This project demonstrates a fully functional, highly conversational **Omnichanne
 
 Want to see the entire platform in action? Watch the quick demo:
 
-[![Ultimate AWS Platform Demo](https://img.youtube.com/vi/-8tu2imrqno/maxresdefault.jpg)](https://youtu.be/-8tu2imrqno)
+[![Ultimate AWS Platform Demo](https://img.youtube.com/vi/SagiW7cQ8xA/maxresdefault.jpg)](https://youtu.be/SagiW7cQ8xA)
 
 **Click to watch:** Real-time data flow, ML predictions, web dashboard & AI chatbot in 2 minutes
 
@@ -40,20 +40,32 @@ If a customer says:
 
 The AI instantly uses its backend tools to look up the customer's order history, fetches the current menu prices, calculates the tax based on the nearest store's location, adds the items to the cart, and responds in less than a second via highly realistic voice.
 
-### 🌟 Beyond Efficiency: Solving Core QSR IT Challenges
-Deploying real-time speech-to-speech AI in a production environment introduces massive IT hurdles. This architecture is specifically designed to solve the most critical concerns:
+---
 
-**🛡️ 1. Real-Time Secure Voice Streaming (SigV4)**
-Connecting a public web browser to a backend AI model usually exposes secure APIs. This architecture uses **Amazon Cognito** to generate temporary IAM credentials and signs a WebSocket connection directly to the Bedrock AgentCore Runtime using **SigV4**, ensuring enterprise-grade security without a middleman server bottleneck.
+## 🌟 Deep Dive: Enterprise Architecture & IT Solutions
 
-**📈 2. Infinite & Automatic Scalability**
-A popular QSR chain experiences massive traffic spikes during lunch hours. Because this architecture is entirely decoupled and event-driven, it scales horizontally and automatically. Whether you have 10 or 10,000 customers ordering simultaneously, the serverless backend absorbs the load effortlessly.
+Deploying real-time speech-to-speech AI in a production environment introduces massive IT hurdles. This architecture solves the most critical enterprise concerns:
 
-**⚡ 3. Ultra-Low Latency Speech-to-Speech**
-Using the new **Amazon Nova Sonic v2**, the system bypasses the traditional "Speech-to-Text -> LLM -> Text-to-Speech" pipeline. It understands audio directly and generates audio directly, resulting in ultra-low latency, human-like conversations that can capture tone, hesitations, and emotion.
+**🛡️ 1. Dual-Layer Security (Cognito JWT + SigV4)**
+The system utilizes an Amazon Cognito User Pool to manage authentication. Instead of exposing secure backend APIs directly to a public browser, the frontend uses temporary IAM credentials to sign a WebSocket connection directly to the Bedrock AgentCore Runtime using **SigV4**. Simultaneously, the `AuthInterceptor` validates the **Cognito JWT** inside the WebSocket stream. A specialized **Post-Confirmation Lambda** automatically assigns a unique `customerId` upon email verification, strictly decoupling Cognito from the DynamoDB tables.
+<br>![Cognito Auth](_images/auth.png)
+<br>![Verification Email](_images/verification_email.png)
 
-**💰 4. Zero Idle Costs (100% Serverless)**
-Traditional AI infrastructure requires provisioning expensive, always-on servers (EC2/ECS) that drain IT budgets even when stores are closed. This solution is built on a pure **Serverless Architecture**. When the system is idle, compute costs drop to **exactly zero**. You only pay for the exact milliseconds of compute and tokens used during an active order.
+**🔗 2. Zero-Code Legacy Integration (OpenAPI & MCP Gateway)**
+Custom Python/Node.js "tools" for the AI do not need to be written. The AgentCore Gateway automatically ingests standard OpenAPI schemas directly from the API Gateway. This means this AI Agent can be dropped on top of **any existing backend REST API** (even legacy systems), and the AI will dynamically discover and use endpoints as tools via the Model Context Protocol (MCP).
+
+**🧠 3. Stateless AI (No Vector DB or Memory Sync Issues)**
+Maintaining user "memory" usually requires expensive Vector Databases or injecting massive chat histories into the LLM context. This AI is entirely **stateless**. When it needs to remember past orders or preferences, it uses tools to query the production DynamoDB in real-time. This guarantees 100% accuracy, eliminates hallucinations, and drastically reduces token costs.
+
+**⚡ 4. Ultra-Low Latency Speech-to-Speech**
+Using the new **Amazon Nova Sonic v2**, the system bypasses the traditional "Speech-to-Text -> LLM -> Text-to-Speech" pipeline. It understands and generates audio directly, resulting in ultra-low latency, human-like conversations that capture tone and emotion.
+
+**📈 5. Infinite Scalability & Zero Idle Costs (100% Serverless)**
+Built on a pure **Serverless Architecture** (AgentCore, API Gateway, Lambda, DynamoDB ). Whether you have 10 or 10,000 customers ordering simultaneously, it scales automatically. Even the Next.js frontend is serverlessly hosted on **Amazon S3 & CloudFront** (secured via OAC). When the system is idle (e.g., stores are closed), compute costs drop to exactly zero.
+
+**📊 6. Full Observability & Auditability**
+Enterprise systems require strict auditing. AgentCore is fully integrated with AWS CloudWatch (accessible via GenAI Observability > Bedrock AgentCore). Every tool the AI calls, every database response it reads, and its internal "Chain of Thought" reasoning are logged. Administrators can trace exactly *why* and *how* the AI reached its conclusions.
+<br>![Monitoring & Observability](_images/monitoring.png)
 
 ---
 
@@ -62,7 +74,7 @@ Traditional AI infrastructure requires provisioning expensive, always-on servers
 This project implements a fully managed, scalable, and secure architecture utilizing the following core AWS services:
 
 * **Amazon Bedrock (Nova Sonic v2):** The core AI model natively handling direct speech-to-speech interaction with ultra-low latency.
-* **Amazon Bedrock AgentCore:** Hosts the WebSocket Gateway and Runtime container, automatically orchestrating MCP tools and SigV4 authentication.
+* **Amazon Bedrock AgentCore:** Hosts the WebSocket Gateway and Runtime container, automatically orchestrating MCP tools and SigV4 authentication. Powered by the cutting-edge **AWS Strands Framework (`strands.experimental.bidi`)** to enable true bidirectional (Bidi) audio streaming over WebSockets.
 * **AWS Lambda & API Gateway:** Serverless compute layer executing business logic (AddToCart, PlaceOrder, GeocodeAddress, etc.).
 * **Amazon DynamoDB:** A highly scalable NoSQL database hosting 5 tables (`Customers`, `Locations`, `Menu`, `Orders`, `Carts`).
 * **Amazon Cognito:** Secures the web UI by handling user authentication, authorization, and secure JWT token management.
@@ -73,24 +85,13 @@ This project implements a fully managed, scalable, and secure architecture utili
 
 ---
 
-## 🏗️ Deep Dive: Technical Enterprise Features
-
-* **Customer Authentication (Amazon Cognito)**: The system utilizes an Amazon Cognito User Pool to securely manage customer profiles and authentication. Users can sign up, log in, and manage their credentials securely. The web application retrieves JWT tokens from Cognito, which are then used to authenticate backend API calls and secure the WebSocket connection. The `AuthInterceptor` natively intercepts the first JSON payload (`type: auth`) over the WebSocket connection to verify the customer's identity before audio streams are permitted.
-  <br>![Cognito User Pool](_images/cognito_users.png)
-* **MCP (Model Context Protocol) Gateway**: Instead of hardcoding tools into the frontend or the model, all tools are exposed via the AgentCore Gateway as MCP endpoints. The AI dynamically discovers available tools (Lambda functions) and requests executions seamlessly.
-* **Infinite Scalability (Serverless)**: Thanks to AgentCore, API Gateway, and AWS Lambda, the entire compute layer is 100% serverless. 
-* **Serverless & Secure Frontend**: The Voice Assistant UI is built in Next.js and exported as a static site hosted on Amazon S3 and distributed globally via Amazon CloudFront. Origin Access Control (OAC) ensures the S3 bucket is completely blocked from the public internet.
-* **Full Observability & Auditability**: Enterprise systems require strict auditing. AgentCore is fully integrated with AWS CloudWatch (accessible via GenAI Observability > Bedrock AgentCore). Every tool the AI calls, every database response it reads, and its internal "Chain of Thought" reasoning are logged. If the AI makes a decision, administrators can trace exactly *why* and *how* it reached that conclusion.
-  <br>![CloudWatch Dashboard](_images/cloudwatch_dashboard.png)
-  <br>![Agent Trace Observability](_images/observability.png)
-
----
-
 ## 🧱 Infrastructure as Code (CDK) Stacks
 
 The project consists of multiple CDK stacks deployed via AWS CodePipeline:
 
-![CodePipeline Stacks](_images/pipeline_stacks.png)
+![CodePipeline Stacks](_images/pipelines.png)
+<br>![Backend Pipeline](_images/backend-pipeline.png)
+<br>![Frontend Pipeline](_images/frontend-pipeline.png)
 
 1. **AgentCoreStack**: Hosts the AgentCore Gateway, the Bidi Agent Runtime, and orchestrates the WebSocket layer.
 2. **ApiGatewayStack**: Exposes REST APIs for all backend business logic.
@@ -132,7 +133,7 @@ The entire architecture is built on a highly secure, real-time streaming pipelin
 1. The user accesses the web application hosted on **Amazon S3 & CloudFront** from their browser or mobile device.
 2. The user authenticates with **Amazon Cognito** using their username and password and receives JWT tokens (Access Token and ID Token).
 3. The frontend exchanges the ID Token with the Cognito Identity Pool for temporary AWS credentials (Access Key, Secret Key, Session Token).
-4. The frontend opens a **SigV4-signed WebSocket connection** to the **AgentCore Runtime** and sends the Access Token as the first message for identity verification.
+4. The frontend establishes a secure, **SigV4-signed WebSocket connection** (The outer transport security) to the **AgentCore Runtime**, and immediately injects the **Cognito JWT Access Token** (The identity payload) as the first frame. This dual-layer security ensures both AWS infrastructure authorization and application-level customer identity.
 5. The agent hosted in AgentCore Runtime validates the Access Token by calling the Cognito GetUser API and extracts the customer's verified name, email, and `customerId`.
 6. AgentCore Runtime initializes the **Nova 2 Sonic** model on Amazon Bedrock and builds a personalized system prompt with the verified customer context.
 7. AgentCore Runtime connects to **AgentCore Gateway** as an **MCP (Model Context Protocol) client** using SigV4 authentication and discovers the available tools.
@@ -152,18 +153,18 @@ A critical feature of this AI Assistant is its **Location-Awareness**. Since a Q
 * **Dynamic Menu & Tax Calculation:** Different branches have different local taxes or menu availability. Finding the nearest branch ensures accurate pricing.
 
 ### 🧪 Synthetic Branch Generation (`seed_data.py`)
-To make this demo incredibly realistic without requiring you to own a real restaurant chain, we included a special **`seed_data.py`** script. 
-When you run the script, it asks for your city and your preferred restaurant type (e.g., "Burger"). It uses the **Amazon Geo Places API** to find *real* burger joints near your actual location and saves them into the DynamoDB `Locations` table as if they were your own chain's branches! This guarantees that when you test the voice assistant from your phone, it will seamlessly find real-world streets and locations near you.
+To make this demo incredibly realistic without requiring ownership of a real restaurant chain, a special **`seed_data.py`** script is included. 
+When executed, the script prompts for a city and preferred restaurant type (e.g., "Burger"). It uses the **Amazon Geo Places API** to find *real* burger joints near that location and saves them into the DynamoDB `Locations` table to act as synthetic branches. This guarantees that during testing, the voice assistant will seamlessly find real-world streets and locations nearby.
 
 ---
 
 ## 🧠 Voice Assistant Agent System & Tools
 
-In our previous architecture, the AgentCore Gateway communicated directly with Lambda functions using hardcoded tool definitions. This project introduces a much more dynamic and scalable **Agentic Workflow** using the Model Context Protocol (MCP) and Amazon API Gateway.
+Rather than relying on hardcoded tool definitions, this architecture introduces a highly dynamic and scalable **Agentic Workflow** using the Model Context Protocol (MCP) and Amazon API Gateway.
 
 Instead of writing manual tool wrappers, the AgentCore Gateway automatically ingests the OpenAPI schemas directly from the API Gateway. The AI Agent seamlessly discovers these REST APIs and uses the entire serverless backend infrastructure as its toolset. When the AI needs real-world data, it triggers a specific AWS Lambda function via API Gateway to query or mutate state in DynamoDB:
 
-![Lambda Functions](_images/lambda_functions.png)
+![Lambda Functions](_images/lambdas.png)
 
 * **GetMenu Tool** ➡️ Queries `QSR-Menu` for current items and prices.
 * **Location Tools** ➡️ `GeocodeAddress`, `GetNearestLocations`, `FindLocationAlongRoute` ➡️ Uses AWS Location Service and queries `QSR-Locations`.
@@ -177,7 +178,9 @@ Instead of writing manual tool wrappers, the AgentCore Gateway automatically ing
 
 The project deploys 5 DynamoDB tables that act as the single source of truth for the QSR chain:
 
-![DynamoDB Tables](_images/dynamodb_tables.png)
+![Customers Table](_images/customers_table.png)
+![Locations Table](_images/locations_table.png)
+![Orders Table](_images/orders_table.png)
 
 1. **`QSR-Locations`**: Stores the GPS coordinates, addresses, and IDs of the restaurant branches.
 2. **`QSR-Menu`**: Stores available items, prices, and allowed customizations (e.g., "No Onions", "Extra Cheese").
@@ -206,8 +209,6 @@ This architecture is primarily **Serverless** (pay-per-use), making it highly co
 | **Amazon CloudFront & S3** | Standard traffic for Voice UI frontend. | **~$2.00** |
 | **Total Estimated Cost** | | **~$49.12** |
 
-
-
 ---
 
 ## 🚀 Deployment Instructions
@@ -231,7 +232,7 @@ Before deploying this project, ensure your local environment and AWS account mee
 ### 1. Setup Your Environment
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/qsr-voice-assistant-agentcore.git
+git clone https://github.com/kanitvural/qsr-voice-assistant-agentcore.git
 cd qsr-voice-assistant-agentcore
 
 # Create virtual environment
@@ -261,11 +262,16 @@ The pipeline pulls the source code directly from GitHub. You must configure an A
      "githubRepo": "<your-username>/<your-repo-name>",
      "githubBranch": "main"
    }
+   ```
 
 ### 3. Deploy the Infrastructure (Zero-Touch Deployment)
 The system uses AWS CDK self-mutating pipelines. Deploy the backend and frontend stacks:
 ```bash
+
+make bootstrap env=backend
 make deploy env=backend
+
+make bootstrap env=frontend
 make deploy env=frontend
 ```
 
@@ -274,16 +280,15 @@ Once the frontend pipeline finishes, you can easily fetch the live application U
 ```bash
 python frontend/scripts/get_cloudfront_url.py
 ```
+### 5. Create a User Account
+Before logging into the frontend, you must register a new user in the Amazon Cognito User Pool. You can do this by navigating to the live application URL (CloudFront) and clicking on the **Sign Up** button, or by creating a user directly via the AWS Cognito Console. Ensure you use the same email address that you provided during the `seed_data.py` step to link your synthetic order history to your profile.
 
-### 5. Generate Synthetic Data
+### 6. Generate Synthetic Data
 Once the deployment finishes, populate your DynamoDB tables with real-world locations near you:
 ```bash
 python frontend/scripts/seed_data.py
 ```
 *(The script will ask for your email to tie the test data to your Cognito account, and will use AWS Geo Places to find real locations near your address).*
-
-### 6. Create a User Account
-Before logging into the frontend, you must register a new user in the Amazon Cognito User Pool. You can do this by navigating to the live application URL (CloudFront) and clicking on the **Sign Up** button, or by creating a user directly via the AWS Cognito Console. Ensure you use the same email address that you provided during the `seed_data.py` step to link your synthetic order history to your profile.
 
 ---
 
@@ -291,7 +296,7 @@ Before logging into the frontend, you must register a new user in the Amazon Cog
 
 Once the data is seeded, open the frontend web application (CloudFront URL), log in, click the Microphone button, and try speaking these scenarios to test the various backend tools and DynamoDB tables:
 
-![App Dashboard](_images/app_dashboard.png)
+![App Dashboard](_images/screenshot.png)
 
 **🧑‍💻 1. Customer Profile (`QSR-Customers`) & Past Orders (`QSR-Orders`)**
 > *"How many orders have I placed so far? By the way, do I have any loyalty points and loyalty tier?"*

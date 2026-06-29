@@ -15,7 +15,7 @@
     ]
   },
   "context": {
-    "githubConnectionArn": "arn:aws:codeconnections:eu-central-1:757884822287:connection/6ac6d892-fc1e-4108-9396-3d6ed79b000d",
+    "githubConnectionArn": "arn:aws:codeconnections:eu-central-1:123456789012:connection/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
     "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,
